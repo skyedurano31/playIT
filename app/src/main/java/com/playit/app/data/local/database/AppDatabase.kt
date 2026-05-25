@@ -2,6 +2,7 @@ package com.playit.app.data.local.database
 
 import androidx.room.Database
 import androidx.room.RoomDatabase
+import androidx.sqlite.db.SupportSQLiteDatabase
 import com.playit.app.data.local.dao.AchievementDao
 import com.playit.app.data.local.dao.BlendItAttemptDao
 import com.playit.app.data.local.dao.BlendItProgressDao
@@ -59,4 +60,13 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun blendItWordDao(): BlendItWordDao
     abstract fun blendItProgressDao(): BlendItProgressDao
     abstract fun blendItAttemptDao(): BlendItAttemptDao
+
+    companion object {
+        val FOREIGN_KEY_CALLBACK = object : RoomDatabase.Callback() {
+            override fun onOpen(db: SupportSQLiteDatabase) {
+                super.onOpen(db)
+                db.execSQL("PRAGMA foreign_keys = ON")
+            }
+        }
+    }
 }
