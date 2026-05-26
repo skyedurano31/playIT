@@ -80,29 +80,30 @@ class SayItViewModel @Inject constructor(
         _isListening.value = true
         voskRecognizer.reset()
 
-        audioCapture.startCapture { buffer ->
-            val result = voskRecognizer.acceptWaveForm(buffer)
-            result?.let {
-                if (it.text.isNotBlank()) {
-                    processResult(it.text)
-                }
-            }
-        }
-    }
-
-    fun stopRecording() {
-        audioCapture.stopCapture()
-        _isListening.value = false
-        val finalResult = voskRecognizer.getFinalResult()
-        finalResult?.let {
-            if (it.text.isNotBlank()) {
-                processResult(it.text)
-            } else {
-                if (_feedback.value == FeedbackState.Listening) {
+        audioCapture.startCapture(
+            onAudioCaptured = { buffer ->
+                voskRecognizer.acceptWaveForm(buffer)
+            },
+            onSpeechDetected = {
+                // optional — update UI to show speech is being captured
+            },
+            onSilenceDetected = {
+                // silence detected — get final result
+                val finalResult = voskRecognizer.getFinalResult()
+                _isListening.value = false
+                finalResult?.let {
+                    if (it.text.isNotBlank()) {
+                        processResult(it.text)
+                    } else {
+                        viewModelScope.launch {
+                            _feedback.value = FeedbackState.Idle
+                        }
+                    }
+                } ?: viewModelScope.launch {
                     _feedback.value = FeedbackState.Idle
                 }
             }
-        }
+        )
     }
 
     private fun processResult(recognizedText: String) {

@@ -4,6 +4,7 @@ import android.Manifest
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
@@ -214,6 +215,7 @@ fun SayItScreen(
         Spacer(modifier = Modifier.weight(1f))
 
         // mic button
+        // replace the entire Box with pointerInput with this
         Box(
             modifier = Modifier
                 .size(120.dp)
@@ -226,16 +228,8 @@ fun SayItScreen(
                         else -> MaterialTheme.colorScheme.primary
                     }
                 )
-                .pointerInput(isVoskReady && hasAudioPermission) {
-                    if (isVoskReady && hasAudioPermission) {
-                        detectTapGestures(
-                            onPress = {
-                                viewModel.startRecording()
-                                tryAwaitRelease()
-                                viewModel.stopRecording()
-                            }
-                        )
-                    }
+                .clickable(enabled = isVoskReady && hasAudioPermission && !isListening) {
+                    viewModel.startRecording()
                 },
             contentAlignment = Alignment.Center
         ) {
@@ -250,12 +244,11 @@ fun SayItScreen(
             )
         }
 
-        // instruction text
         Text(
             text = when {
                 !hasAudioPermission -> "Microphone permission needed"
-                isListening -> "Release to stop"
-                isVoskReady -> "Hold to speak"
+                isListening -> "Listening..."
+                isVoskReady -> "Tap to speak"
                 else -> "Loading..."
             },
             color = Color.Gray,

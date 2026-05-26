@@ -25,6 +25,11 @@ class AudioCapture @Inject constructor(
         sampleRate, channelConfig, audioFormat
     )
 
+    // VAD settings
+    private val silenceThreshold = 800        // amplitude below this = silence
+    private val silenceDurationMs = 1000L     // stop after 1 second of silence
+    private val minSpeechDurationMs = 300L    // must speak for at least 300ms
+
     fun hasPermission(): Boolean {
         return ContextCompat.checkSelfPermission(
             context,
@@ -32,7 +37,11 @@ class AudioCapture @Inject constructor(
         ) == PackageManager.PERMISSION_GRANTED
     }
 
-    fun startCapture(onAudioCaptured: (ShortArray) -> Unit) {
+    fun startCapture(
+        onAudioCaptured: (ShortArray) -> Unit,
+        onSpeechDetected: () -> Unit = {},
+        onSilenceDetected: () -> Unit = {}
+    ) {
         if (!hasPermission()) return
 
         try {
@@ -48,10 +57,44 @@ class AudioCapture @Inject constructor(
 
             Thread {
                 val buffer = ShortArray(bufferSize)
+                var silenceStartTime = 0L
+                var speechStartTime = 0L
+                var hasSpeechBeenDetected = false
+                var isSilenceDetected = false
+
                 while (isRecording) {
                     val read = audioRecord?.read(buffer, 0, buffer.size) ?: 0
                     if (read > 0) {
-                        onAudioCaptured(buffer.copyOf(read))
+                        val amplitude = buffer.take(read).maxOf { it.toInt().coerceAtLeast(0) }
+                        val currentTime = System.currentTimeMillis()
+
+                        if (amplitude > silenceThreshold) {
+                            // speech detected
+                            if (!hasSpeechBeenDetected) {
+                                speechStartTime = currentTime
+                                hasSpeechBeenDetected = true
+                                onSpeechDetected()
+                            }
+                            silenceStartTime = 0L
+                            isSilenceDetected = false
+                            onAudioCaptured(buffer.copyOf(read))
+                        } else {
+                            // silence detected
+                            onAudioCaptured(buffer.copyOf(read))
+                            if (hasSpeechBeenDetected && !isSilenceDetected) {
+                                if (silenceStartTime == 0L) {
+                                    silenceStartTime = currentTime
+                                }
+                                val speechDuration = currentTime - speechStartTime
+                                val silenceDuration = currentTime - silenceStartTime
+                                if (silenceDuration >= silenceDurationMs
+                                    && speechDuration >= minSpeechDurationMs) {
+                                    isSilenceDetected = true
+                                    onSilenceDetected()
+                                    stopCapture()
+                                }
+                            }
+                        }
                     }
                 }
             }.start()
