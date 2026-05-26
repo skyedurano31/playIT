@@ -7,7 +7,7 @@ import com.playit.app.data.local.entity.Phoneme
 object DatabaseSeeder {
 
     fun getPhonemes() = listOf(
-        Phoneme(phonemeId = 1,  letter = "M",  audioPath = "audio/phonemes/phoneme_m.mp3",  imagePath = "images/phonemes/m_image.png",  exampleWord = "Mouse"),
+        Phoneme(phonemeId = 1,  letter = "M",  audioPath = "audio/phonemes/phoneme_m.mp3",  imagePath = "images/phonemes/m_image.png",  exampleWord = "Monkey"),
         Phoneme(phonemeId = 2,  letter = "A",  audioPath = "audio/phonemes/phoneme_a.mp3",  imagePath = "images/phonemes/a_image.png",  exampleWord = "Apple"),
         Phoneme(phonemeId = 3,  letter = "S",  audioPath = "audio/phonemes/phoneme_s.mp3",  imagePath = "images/phonemes/s_image.png",  exampleWord = "Sun"),
         Phoneme(phonemeId = 4,  letter = "I",  audioPath = "audio/phonemes/phoneme_i.mp3",  imagePath = "images/phonemes/i_image.png",  exampleWord = "Igloo"),
