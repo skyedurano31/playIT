@@ -27,7 +27,7 @@ class LessonProgressRepositoryImpl @Inject constructor(
     override suspend fun isCompleted(profileId: Int, phonemeId: Int): Boolean {
         return (lessonProgressDao.isCompleted(profileId, phonemeId) ?: 0) == 1
     }
-    
+
     override suspend fun saveHearItComplete(profileId: Int, phonemeId: Int) {
         val existing = lessonProgressDao.getProgress(profileId, phonemeId)
         if (existing == null) {
