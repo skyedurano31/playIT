@@ -13,6 +13,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.playit.app.presentation.common.SplashScreen
+import com.playit.app.presentation.hearit.HearItScreen
 import com.playit.app.presentation.map.MapScreen
 import com.playit.app.presentation.profile.NamePromptScreen
 
@@ -62,10 +63,30 @@ fun NavGraph(
             arguments = listOf(navArgument("phonemeId") { type = NavType.IntType })
         ) { backStackEntry ->
             val phonemeId = backStackEntry.arguments?.getInt("phonemeId") ?: 1
-            // HearItScreen goes here — placeholder for now
-            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                Text("Hear It — phonemeId: $phonemeId")
+            HearItScreen(
+                phonemeId = phonemeId,
+                onNext = { id ->
+                    navController.navigate(Screen.SayIt.createRoute(id))
+                },
+                onBack = {
+                    navController.popBackStack()
+                }
+            )
+        }
+
+// SayIt placeholder so it does not crash
+        composable(
+            route = Screen.SayIt.route,
+            arguments = listOf(navArgument("phonemeId") { type = NavType.IntType })
+        ) { backStackEntry ->
+            val phonemeId = backStackEntry.arguments?.getInt("phonemeId") ?: 1
+            Box(
+                modifier = Modifier.fillMaxSize(),
+                contentAlignment = Alignment.Center
+            ) {
+                Text("Say It — phonemeId: $phonemeId")
             }
         }
+
     }
 }
