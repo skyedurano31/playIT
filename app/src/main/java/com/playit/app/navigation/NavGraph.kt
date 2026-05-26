@@ -16,6 +16,7 @@ import com.playit.app.presentation.common.SplashScreen
 import com.playit.app.presentation.hearit.HearItScreen
 import com.playit.app.presentation.map.MapScreen
 import com.playit.app.presentation.profile.NamePromptScreen
+import com.playit.app.presentation.sayit.SayItScreen
 
 @Composable
 fun NavGraph(
@@ -74,9 +75,23 @@ fun NavGraph(
             )
         }
 
-// SayIt placeholder so it does not crash
         composable(
             route = Screen.SayIt.route,
+            arguments = listOf(navArgument("phonemeId") { type = NavType.IntType })
+        ) { backStackEntry ->
+            val phonemeId = backStackEntry.arguments?.getInt("phonemeId") ?: 1
+            SayItScreen(
+                phonemeId = phonemeId,
+                onNext = { id ->
+                    navController.navigate(Screen.FindIt.createRoute(id))
+                },
+                onBack = {
+                    navController.popBackStack()
+                }
+            )
+        }
+        composable(
+            route = Screen.FindIt.route,
             arguments = listOf(navArgument("phonemeId") { type = NavType.IntType })
         ) { backStackEntry ->
             val phonemeId = backStackEntry.arguments?.getInt("phonemeId") ?: 1
@@ -84,7 +99,7 @@ fun NavGraph(
                 modifier = Modifier.fillMaxSize(),
                 contentAlignment = Alignment.Center
             ) {
-                Text("Say It — phonemeId: $phonemeId")
+                Text("Find It — phonemeId: $phonemeId")
             }
         }
 
