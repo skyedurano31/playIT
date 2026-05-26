@@ -8,4 +8,6 @@ interface LessonProgressRepository {
     suspend fun getProgressByProfile(profileId: Int): List<LessonProgress>
     suspend fun getProgress(profileId: Int, phonemeId: Int): LessonProgress?
     suspend fun isCompleted(profileId: Int, phonemeId: Int): Boolean
+    suspend fun saveHearItComplete(profileId: Int, phonemeId: Int)
+
 }
