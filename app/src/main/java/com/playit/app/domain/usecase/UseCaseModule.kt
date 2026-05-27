@@ -4,6 +4,8 @@ import com.playit.app.domain.usecase.HeartManager
 import com.playit.app.domain.usecase.SpeechValidator
 import com.playit.app.domain.usecase.UnlockManager
 import com.playit.app.domain.repository.LessonProgressRepository
+import com.playit.app.domain.usecase.GridGenerator
+import com.playit.app.domain.usecase.StarCalculator
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -26,4 +28,12 @@ object UseCaseModule {
     fun provideUnlockManager(
         lessonProgressRepository: LessonProgressRepository
     ): UnlockManager = UnlockManager(lessonProgressRepository)
+
+    @Provides
+    @Singleton
+    fun provideStarCalculator(): StarCalculator = StarCalculator()
+
+    @Provides
+    @Singleton
+    fun provideGridGenerator(): GridGenerator = GridGenerator()
 }
