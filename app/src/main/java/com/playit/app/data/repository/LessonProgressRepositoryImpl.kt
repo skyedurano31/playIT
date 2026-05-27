@@ -40,4 +40,34 @@ class LessonProgressRepositoryImpl @Inject constructor(
             )
         }
     }
+
+    override suspend fun saveFindItProgress(
+        profileId: Int,
+        phonemeId: Int,
+        starsEarned: Int,
+        heartsLost: Int
+    ) {
+        val existing = lessonProgressDao.getProgress(profileId, phonemeId)
+        if (existing != null) {
+            lessonProgressDao.update(
+                existing.copy(
+                    starsEarned = starsEarned,
+                    heartsLost = heartsLost,
+                    isCompleted = 1,
+                    completedAt = System.currentTimeMillis()
+                )
+            )
+        } else {
+            lessonProgressDao.insert(
+                LessonProgress(
+                    profileId = profileId,
+                    phonemeId = phonemeId,
+                    starsEarned = starsEarned,
+                    heartsLost = heartsLost,
+                    isCompleted = 1,
+                    completedAt = System.currentTimeMillis()
+                )
+            )
+        }
+    }
 }
