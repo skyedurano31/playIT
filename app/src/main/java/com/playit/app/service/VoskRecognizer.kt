@@ -2,90 +2,73 @@ package com.playit.app.service
 
 import android.content.Context
 import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.coroutines.suspendCancellableCoroutine
+import org.json.JSONObject
 import org.vosk.Model
 import org.vosk.Recognizer
+import org.vosk.android.RecognitionListener
+import org.vosk.android.SpeechService
 import org.vosk.android.StorageService
 import javax.inject.Inject
 import javax.inject.Singleton
-
-data class RecognitionResult(
-    val text: String,
-    val confidence: Float
-)
+import kotlin.coroutines.resume
 
 @Singleton
 class VoskRecognizer @Inject constructor(
     @ApplicationContext private val context: Context
 ) {
     private var model: Model? = null
-    private var recognizer: Recognizer? = null
+    private var speechService: SpeechService? = null
     private var isReady = false
 
-    fun initialize(onReady: () -> Unit, onError: (Exception) -> Unit) {
-        android.util.Log.d("VoskRecognizer", "Starting initialization...")
+    suspend fun initialize(): Boolean = suspendCancellableCoroutine { continuation ->
         StorageService.unpack(
             context,
             "vosk-model",
             "model",
-            { model ->
-                android.util.Log.d("VoskRecognizer", "Model loaded successfully")
-                this.model = model
-                this.recognizer = Recognizer(model, 16000.0f)
+            { loadedModel ->
+                model = loadedModel
                 isReady = true
-                onReady()
+                continuation.resume(true)
             },
             { exception ->
-                android.util.Log.e("VoskRecognizer", "Error loading model: ${exception.message}")
-                onError(exception)
+                android.util.Log.e("VoskRecognizer", "Model load failed: ${exception.message}")
+                continuation.resume(false)
             }
         )
     }
 
-    fun acceptWaveForm(buffer: ShortArray): RecognitionResult? {
-        if (!isReady || recognizer == null) return null
-        return try {
-            recognizer!!.acceptWaveForm(buffer, buffer.size)
-            val result = recognizer!!.partialResult
-            parseResult(result)
+    fun startListening(listener: RecognitionListener) {
+        val currentModel = model ?: return
+        try {
+            val recognizer = Recognizer(currentModel, 16000.0f)
+            speechService?.shutdown()
+            speechService = SpeechService(recognizer, 16000.0f)
+            speechService!!.startListening(listener)
         } catch (e: Exception) {
-            null
+            android.util.Log.e("VoskRecognizer", "Start listening failed: ${e.message}")
         }
     }
 
-    fun getFinalResult(): RecognitionResult? {
-        if (!isReady || recognizer == null) return null
-        return try {
-            val result = recognizer!!.finalResult
-            parseResult(result)
-        } catch (e: Exception) {
-            null
-        }
-    }
-
-    private fun parseResult(json: String): RecognitionResult {
-        // parse partial result — format: {"partial": "text"}
-        // parse final result — format: {"text": "text"}
-        val text = json
-            .replace("{", "")
-            .replace("}", "")
-            .replace("\"", "")
-            .replace("partial :", "")
-            .replace("text :", "")
-            .replace("partial:", "")
-            .replace("text:", "")
-            .trim()
-        return RecognitionResult(text = text, confidence = 0.8f)
-    }
-
-    fun reset() {
-        recognizer?.reset()
-    }
-
-    fun release() {
-        recognizer?.close()
-        model?.close()
-        isReady = false
+    fun stopListening() {
+        speechService?.stop()
     }
 
     fun isReady() = isReady
+
+    fun parseResult(json: String, key: String): String {
+        return try {
+            JSONObject(json).getString(key).trim()
+        } catch (e: Exception) {
+            ""
+        }
+    }
+
+    fun release() {
+        speechService?.shutdown()
+        speechService = null
+        model?.close()
+        model = null
+        isReady = false
+    }
 }

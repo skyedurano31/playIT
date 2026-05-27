@@ -9,13 +9,15 @@ import com.playit.app.domain.repository.SayItAttemptRepository
 import com.playit.app.domain.usecase.HeartManager
 import com.playit.app.domain.usecase.SessionManager
 import com.playit.app.domain.usecase.SpeechValidator
-import com.playit.app.service.AudioCapture
 import com.playit.app.service.AudioPlayer
 import com.playit.app.service.VoskRecognizer
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import org.vosk.android.RecognitionListener
 import javax.inject.Inject
 
 sealed class FeedbackState {
@@ -23,7 +25,6 @@ sealed class FeedbackState {
     object Listening : FeedbackState()
     object Correct : FeedbackState()
     object Incorrect : FeedbackState()
-    object Loading : FeedbackState()
 }
 
 @HiltViewModel
@@ -31,12 +32,11 @@ class SayItViewModel @Inject constructor(
     private val phonemeRepository: PhonemeRepository,
     private val sayItAttemptRepository: SayItAttemptRepository,
     private val lessonProgressRepository: LessonProgressRepository,
-    private val audioCapture: AudioCapture,
     private val voskRecognizer: VoskRecognizer,
     private val speechValidator: SpeechValidator,
     private val heartManager: HeartManager,
     private val audioPlayer: AudioPlayer
-) : ViewModel() {
+) : ViewModel(), RecognitionListener {
 
     private val _phoneme = MutableStateFlow<Phoneme?>(null)
     val phoneme: StateFlow<Phoneme?> = _phoneme
@@ -50,14 +50,19 @@ class SayItViewModel @Inject constructor(
     private val _isListening = MutableStateFlow(false)
     val isListening: StateFlow<Boolean> = _isListening
 
-    private val _attempts = MutableStateFlow<List<Boolean>>(emptyList())
-    val attempts: StateFlow<List<Boolean>> = _attempts
-
     private val _isVoskReady = MutableStateFlow(false)
     val isVoskReady: StateFlow<Boolean> = _isVoskReady
 
     private val _isSessionPassed = MutableStateFlow(false)
     val isSessionPassed: StateFlow<Boolean> = _isSessionPassed
+
+    private val _attempts = MutableStateFlow<List<Boolean>>(emptyList())
+    val attempts: StateFlow<List<Boolean>> = _attempts
+
+    private val _partialText = MutableStateFlow("")
+    val partialText: StateFlow<String> = _partialText
+
+    private var resultHandled = false
 
     fun loadPhoneme(phonemeId: Int) {
         viewModelScope.launch {
@@ -67,51 +72,96 @@ class SayItViewModel @Inject constructor(
     }
 
     private fun initializeVosk() {
-        voskRecognizer.initialize(
-            onReady = { _isVoskReady.value = true },
-            onError = { _isVoskReady.value = false }
-        )
+        viewModelScope.launch(Dispatchers.IO) {
+            val success = voskRecognizer.initialize()
+            withContext(Dispatchers.Main) {
+                _isVoskReady.value = success
+            }
+        }
     }
 
     fun startRecording() {
         if (!_isVoskReady.value) return
-        if (!audioCapture.hasPermission()) return
+        resultHandled = false
         _feedback.value = FeedbackState.Listening
         _isListening.value = true
-        voskRecognizer.reset()
-
-        audioCapture.startCapture(
-            onAudioCaptured = { buffer ->
-                voskRecognizer.acceptWaveForm(buffer)
-            },
-            onSpeechDetected = {
-                // optional — update UI to show speech is being captured
-            },
-            onSilenceDetected = {
-                // silence detected — get final result
-                val finalResult = voskRecognizer.getFinalResult()
+        _partialText.value = ""
+        viewModelScope.launch(Dispatchers.Main) {
+            try {
+                voskRecognizer.startListening(this@SayItViewModel)
+            } catch (e: Exception) {
+                android.util.Log.e("SayItViewModel", "startRecording failed: ${e.message}")
                 _isListening.value = false
-                finalResult?.let {
-                    if (it.text.isNotBlank()) {
-                        processResult(it.text)
-                    } else {
-                        viewModelScope.launch {
-                            _feedback.value = FeedbackState.Idle
-                        }
-                    }
-                } ?: viewModelScope.launch {
-                    _feedback.value = FeedbackState.Idle
-                }
+                _feedback.value = FeedbackState.Idle
             }
-        )
+        }
+    }
+
+    fun stopRecording() {
+        voskRecognizer.stopListening()
+        _isListening.value = false
+    }
+
+    override fun onPartialResult(hypothesis: String) {
+        val text = voskRecognizer.parseResult(hypothesis, "partial")
+        if (text.isNotEmpty()) {
+            _partialText.value = text
+        }
+    }
+
+    override fun onResult(hypothesis: String) {
+        if (resultHandled) return
+        val text = voskRecognizer.parseResult(hypothesis, "text")
+        if (text.isNotEmpty()) {
+            resultHandled = true
+            _partialText.value = ""
+            processResult(text)
+        }
+    }
+
+    override fun onFinalResult(hypothesis: String) {
+        if (resultHandled) return
+        val text = voskRecognizer.parseResult(hypothesis, "text")
+        resultHandled = true
+        _partialText.value = ""
+        if (text.isNotEmpty()) processResult(text)
+        else {
+            viewModelScope.launch(Dispatchers.Main) {
+                _isListening.value = false
+                _feedback.value = FeedbackState.Idle
+            }
+        }
+    }
+
+    override fun onError(exception: Exception) {
+        voskRecognizer.stopListening()
+        viewModelScope.launch(Dispatchers.Main) {
+            _isListening.value = false
+            _feedback.value = FeedbackState.Idle
+        }
+        android.util.Log.e("SayItViewModel", "Vosk error: ${exception.message}")
+    }
+
+    override fun onTimeout() {
+        voskRecognizer.stopListening()
+        viewModelScope.launch(Dispatchers.Main) {
+            _isListening.value = false
+            _feedback.value = FeedbackState.Idle
+        }
     }
 
     private fun processResult(recognizedText: String) {
         val letter = _phoneme.value?.letter ?: return
         val isCorrect = speechValidator.validate(recognizedText, letter)
 
-        viewModelScope.launch {
-            saveAttempt(isCorrect)
+        viewModelScope.launch(Dispatchers.Main) {
+            // stop mic before anything else
+            voskRecognizer.stopListening()
+            _isListening.value = false
+
+            withContext(Dispatchers.IO) {
+                saveAttempt(isCorrect)
+            }
 
             if (isCorrect) {
                 _feedback.value = FeedbackState.Correct
@@ -123,12 +173,11 @@ class SayItViewModel @Inject constructor(
                 heartManager.deductHeart()
                 _hearts.value = heartManager.getHearts()
 
-                // play corrective audio
+                // safe to play now — mic is already stopped
                 _phoneme.value?.audioPath?.let { path ->
                     audioPlayer.play(path)
                 }
 
-                // check if hearts depleted
                 if (heartManager.isDepletedAndReset()) {
                     _hearts.value = 3
                 }
@@ -156,11 +205,15 @@ class SayItViewModel @Inject constructor(
                 phonemeId
             )
             if (existing != null) {
-                lessonProgressRepository.update(
-                    existing.copy(heartsLost = heartManager.getTotalHeartsLost())
-                )
+                withContext(Dispatchers.IO) {
+                    lessonProgressRepository.update(
+                        existing.copy(heartsLost = heartManager.getTotalHeartsLost())
+                    )
+                }
             }
-            onSaved()
+            withContext(Dispatchers.Main) {
+                onSaved()
+            }
         }
     }
 
@@ -170,7 +223,7 @@ class SayItViewModel @Inject constructor(
 
     override fun onCleared() {
         super.onCleared()
-        audioCapture.stopCapture()
+        voskRecognizer.stopListening()
         voskRecognizer.release()
         audioPlayer.release()
     }

@@ -1,7 +1,6 @@
 package com.playit.app.di
 
 import android.content.Context
-import com.playit.app.service.AudioCapture
 import com.playit.app.service.AudioPlayer
 import com.playit.app.service.VoskRecognizer
 import dagger.Module
@@ -20,12 +19,6 @@ object ServiceModule {
     fun provideAudioPlayer(
         @ApplicationContext context: Context
     ): AudioPlayer = AudioPlayer(context)
-
-    @Provides
-    @Singleton
-    fun provideAudioCapture(
-        @ApplicationContext context: Context
-    ): AudioCapture = AudioCapture(context)
 
     @Provides
     @Singleton
