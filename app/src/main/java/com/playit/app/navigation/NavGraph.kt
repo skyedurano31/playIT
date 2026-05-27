@@ -13,6 +13,8 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.playit.app.presentation.common.SplashScreen
+import com.playit.app.presentation.findit.FindItScreen
+import com.playit.app.presentation.findit.LetterCompleteScreen
 import com.playit.app.presentation.hearit.HearItScreen
 import com.playit.app.presentation.map.MapScreen
 import com.playit.app.presentation.profile.NamePromptScreen
@@ -95,12 +97,37 @@ fun NavGraph(
             arguments = listOf(navArgument("phonemeId") { type = NavType.IntType })
         ) { backStackEntry ->
             val phonemeId = backStackEntry.arguments?.getInt("phonemeId") ?: 1
-            Box(
-                modifier = Modifier.fillMaxSize(),
-                contentAlignment = Alignment.Center
-            ) {
-                Text("Find It — phonemeId: $phonemeId")
-            }
+            FindItScreen(
+                phonemeId = phonemeId,
+                onComplete = { id, stars ->
+                    navController.navigate(Screen.LetterComplete.createRoute(id) + "?stars=$stars") {
+                        popUpTo(Screen.HearIt.createRoute(id)) { inclusive = true }
+                    }
+                },
+                onBack = {
+                    navController.popBackStack()
+                }
+            )
+        }
+
+        composable(
+            route = Screen.LetterComplete.route + "?stars={stars}",
+            arguments = listOf(
+                navArgument("phonemeId") { type = NavType.IntType },
+                navArgument("stars") { type = NavType.IntType; defaultValue = 1 }
+            )
+        ) { backStackEntry ->
+            val phonemeId = backStackEntry.arguments?.getInt("phonemeId") ?: 1
+            val stars = backStackEntry.arguments?.getInt("stars") ?: 1
+            LetterCompleteScreen(
+                phonemeId = phonemeId,
+                starsEarned = stars,
+                onContinue = {
+                    navController.navigate(Screen.Map.route) {
+                        popUpTo(Screen.Map.route) { inclusive = true }
+                    }
+                }
+            )
         }
 
     }
