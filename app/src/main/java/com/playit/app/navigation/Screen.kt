@@ -4,6 +4,7 @@ sealed class Screen(val route: String) {
     object Splash : Screen("splash")
     object NamePrompt : Screen("name_prompt")
     object Map : Screen("map")
+    object Dashboard : Screen("dashboard")
     object HearIt : Screen("hear_it/{phonemeId}") {
         fun createRoute(phonemeId: Int) = "hear_it/$phonemeId"
     }
@@ -16,5 +17,4 @@ sealed class Screen(val route: String) {
     object LetterComplete : Screen("letter_complete/{phonemeId}") {
         fun createRoute(phonemeId: Int) = "letter_complete/$phonemeId"
     }
-    object Dashboard : Screen("dashboard")
 }

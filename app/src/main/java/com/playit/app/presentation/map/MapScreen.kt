@@ -24,6 +24,7 @@ import com.playit.app.domain.model.MapNode
 @Composable
 fun MapScreen(
     onLetterSelected: (Int) -> Unit,
+    onDashboardClicked: () -> Unit,  // ✅ ADD THIS
     viewModel: MapViewModel = hiltViewModel()
 ) {
     val mapNodes by viewModel.mapNodes.collectAsState()
@@ -45,11 +46,13 @@ fun MapScreen(
     Column(modifier = Modifier.fillMaxSize()) {
 
         // top bar
-        Box(
+        Row(
             modifier = Modifier
                 .fillMaxWidth()
                 .background(MaterialTheme.colorScheme.primary)
-                .padding(16.dp)
+                .padding(16.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
         ) {
             Text(
                 text = "playIT",
@@ -57,6 +60,13 @@ fun MapScreen(
                 fontSize = 24.sp,
                 fontWeight = FontWeight.Bold
             )
+            TextButton(onClick = onDashboardClicked) {
+                Text(
+                    text = "Dashboard",
+                    color = Color.White,
+                    fontSize = 14.sp
+                )
+            }
         }
 
         if (isLoading) {

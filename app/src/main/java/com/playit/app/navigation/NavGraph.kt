@@ -28,6 +28,8 @@ fun NavGraph(
         navController = navController,
         startDestination = Screen.Splash.route
     ) {
+
+        // Splash
         composable(Screen.Splash.route) {
             SplashScreen(
                 onNoProfile = {
@@ -43,6 +45,7 @@ fun NavGraph(
             )
         }
 
+        // Name prompt
         composable(Screen.NamePrompt.route) {
             NamePromptScreen(
                 onProfileCreated = {
@@ -53,17 +56,24 @@ fun NavGraph(
             )
         }
 
+        // Map
         composable(Screen.Map.route) {
             MapScreen(
                 onLetterSelected = { phonemeId ->
                     navController.navigate(Screen.HearIt.createRoute(phonemeId))
+                },
+                onDashboardClicked = {
+                    navController.navigate(Screen.Dashboard.route)
                 }
             )
         }
 
+        // Hear It
         composable(
             route = Screen.HearIt.route,
-            arguments = listOf(navArgument("phonemeId") { type = NavType.IntType })
+            arguments = listOf(
+                navArgument("phonemeId") { type = NavType.IntType }
+            )
         ) { backStackEntry ->
             val phonemeId = backStackEntry.arguments?.getInt("phonemeId") ?: 1
             HearItScreen(
@@ -77,9 +87,12 @@ fun NavGraph(
             )
         }
 
+        // Say It
         composable(
             route = Screen.SayIt.route,
-            arguments = listOf(navArgument("phonemeId") { type = NavType.IntType })
+            arguments = listOf(
+                navArgument("phonemeId") { type = NavType.IntType }
+            )
         ) { backStackEntry ->
             val phonemeId = backStackEntry.arguments?.getInt("phonemeId") ?: 1
             SayItScreen(
@@ -92,16 +105,23 @@ fun NavGraph(
                 }
             )
         }
+
+        // Find It
         composable(
             route = Screen.FindIt.route,
-            arguments = listOf(navArgument("phonemeId") { type = NavType.IntType })
+            arguments = listOf(
+                navArgument("phonemeId") { type = NavType.IntType }
+            )
         ) { backStackEntry ->
             val phonemeId = backStackEntry.arguments?.getInt("phonemeId") ?: 1
             FindItScreen(
                 phonemeId = phonemeId,
                 onComplete = { id, stars ->
-                    navController.navigate(Screen.LetterComplete.createRoute(id) + "?stars=$stars") {
-                        popUpTo(Screen.HearIt.createRoute(id)) { inclusive = true }
+                    navController.navigate(
+                        Screen.LetterComplete.createRoute(id) + "?stars=$stars"
+                    ) {
+                        // clear hear it, say it, find it from back stack
+                        popUpTo(Screen.Map.route) { inclusive = false }
                     }
                 },
                 onBack = {
@@ -110,11 +130,15 @@ fun NavGraph(
             )
         }
 
+        // Letter Complete
         composable(
             route = Screen.LetterComplete.route + "?stars={stars}",
             arguments = listOf(
                 navArgument("phonemeId") { type = NavType.IntType },
-                navArgument("stars") { type = NavType.IntType; defaultValue = 1 }
+                navArgument("stars") {
+                    type = NavType.IntType
+                    defaultValue = 1
+                }
             )
         ) { backStackEntry ->
             val phonemeId = backStackEntry.arguments?.getInt("phonemeId") ?: 1
@@ -130,5 +154,14 @@ fun NavGraph(
             )
         }
 
+        // Dashboard placeholder
+        composable(Screen.Dashboard.route) {
+            Box(
+                modifier = Modifier.fillMaxSize(),
+                contentAlignment = Alignment.Center
+            ) {
+                Text("Dashboard — coming soon")
+            }
+        }
     }
 }
