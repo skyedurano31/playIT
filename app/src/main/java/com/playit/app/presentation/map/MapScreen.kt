@@ -16,6 +16,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.playit.app.domain.model.MapNode
 
 @Composable
@@ -25,6 +28,19 @@ fun MapScreen(
 ) {
     val mapNodes by viewModel.mapNodes.collectAsState()
     val isLoading by viewModel.isLoading.collectAsState()
+
+    val lifecycleOwner = LocalLifecycleOwner.current
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) {
+                viewModel.loadMapNodes()
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose {
+            lifecycleOwner.lifecycle.removeObserver(observer)
+        }
+    }
 
     Column(modifier = Modifier.fillMaxSize()) {
 
@@ -91,7 +107,7 @@ fun LetterNodeItem(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable { onClick() }
+            .clickable(enabled = node.isUnlocked) { onClick() }
             .padding(8.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(16.dp)
@@ -105,25 +121,36 @@ fun LetterNodeItem(
             contentAlignment = Alignment.Center
         ) {
             Text(
-                text = node.letter,
+                text = if (node.isUnlocked) node.letter else "🔒",
                 color = Color.White,
                 fontSize = 24.sp,
                 fontWeight = FontWeight.Bold
             )
         }
 
-        // letter info
         Column {
             Text(
-                text = if (node.isUnlocked) node.letter else "🔒 Locked",
+                text = if (node.isUnlocked) node.letter else "Locked",
                 fontSize = 18.sp,
                 fontWeight = FontWeight.SemiBold
             )
-            Text(
-                text = if (node.starsEarned > 0) "⭐".repeat(node.starsEarned) else "Not started",
-                fontSize = 14.sp,
-                color = Color.Gray
-            )
+            // stars row
+            if (node.starsEarned > 0) {
+                Row {
+                    repeat(3) { index ->
+                        Text(
+                            text = if (index < node.starsEarned) "⭐" else "☆",
+                            fontSize = 16.sp
+                        )
+                    }
+                }
+            } else {
+                Text(
+                    text = if (node.isUnlocked) "Not started" else "",
+                    fontSize = 14.sp,
+                    color = Color.Gray
+                )
+            }
         }
     }
 }
