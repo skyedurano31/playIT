@@ -5,6 +5,7 @@ import com.playit.app.domain.usecase.SpeechValidator
 import com.playit.app.domain.usecase.UnlockManager
 import com.playit.app.domain.repository.LessonProgressRepository
 import com.playit.app.domain.usecase.GridGenerator
+import com.playit.app.domain.usecase.LetterStatusCalculator
 import com.playit.app.domain.usecase.StarCalculator
 import dagger.Module
 import dagger.Provides
@@ -36,4 +37,8 @@ object UseCaseModule {
     @Provides
     @Singleton
     fun provideGridGenerator(): GridGenerator = GridGenerator()
+
+    @Provides
+    @Singleton
+    fun provideLetterStatusCalculator(): LetterStatusCalculator = LetterStatusCalculator()
 }

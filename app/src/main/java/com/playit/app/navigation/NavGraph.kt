@@ -13,6 +13,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.playit.app.presentation.common.SplashScreen
+import com.playit.app.presentation.dashboard.ParentDashboardScreen
 import com.playit.app.presentation.findit.FindItScreen
 import com.playit.app.presentation.findit.LetterCompleteScreen
 import com.playit.app.presentation.hearit.HearItScreen
@@ -154,14 +155,12 @@ fun NavGraph(
             )
         }
 
-        // Dashboard placeholder
         composable(Screen.Dashboard.route) {
-            Box(
-                modifier = Modifier.fillMaxSize(),
-                contentAlignment = Alignment.Center
-            ) {
-                Text("Dashboard — coming soon")
-            }
+            ParentDashboardScreen(
+                onBack = {
+                    navController.popBackStack()
+                }
+            )
         }
     }
 }
