@@ -122,7 +122,8 @@ fun WindingPathMap(
     onNodeClick: (MapNode.LetterNode) -> Unit
 ) {
     val nodeSize = 78.dp
-    val rowHeight = 125.dp
+    val blendItNodeSize = 90.dp  // ✅ blendIT nodes are BIGGER (90dp vs 78dp)
+    val rowHeight = 135.dp  // ✅ Increased row height to fit bigger nodes
 
     val density = LocalDensity.current
     val leftX = 80.dp
@@ -131,12 +132,13 @@ fun WindingPathMap(
     val leftXPx = with(density) { leftX.toPx() }
     val rightXPx = with(density) { rightX.toPx() }
     val nodeSizePx = with(density) { nodeSize.toPx() }
+    val blendItNodeSizePx = with(density) { blendItNodeSize.toPx() }
     val rowHeightPx = with(density) { rowHeight.toPx() }
 
     // Get letter nodes in ORIGINAL order (m, s, a, i, o, b, e...)
     val letterNodes = nodes.filterIsInstance<MapNode.LetterNode>()
 
-    // 🔥 FIX: Reverse for bottom-to-top counting, insert blendIT, then reverse back
+    // Reverse for bottom-to-top counting, insert blendIT, then reverse back
     val nodesFromBottom = letterNodes.reversed()
 
     val combinedFromBottom = mutableListOf<Pair<MapNode, Boolean>>()
@@ -145,7 +147,6 @@ fun WindingPathMap(
         combinedFromBottom.add(Pair(letterNode, false))
 
         // Add blendIT after every 5th letter from BOTTOM
-        // Letters from bottom: index 0=m, 1=s, 2=a, 3=i, 4=o → blendIT after o
         if ((index + 1) % 5 == 0 && index < nodesFromBottom.size - 1) {
             val placeholderNode = MapNode.LetterNode(
                 phonemeId = 1000 + ((index + 1) / 5),
@@ -212,11 +213,12 @@ fun WindingPathMap(
             val xPx = if (isLeft) leftXPx else rightXPx
             val yPx = (index + 1) * rowHeightPx
 
+            // Different bounce animation for blendIT nodes
             val bounce = rememberInfiniteTransition(label = "bounce_$index")
                 .animateFloat(
-                    0f, 10f,
+                    0f, if (isBlendIt) 8f else 10f,  // ✅ Slightly less bounce for blendIT
                     infiniteRepeatable(
-                        tween(900),
+                        tween(if (isBlendIt) 1000 else 900),
                         RepeatMode.Reverse
                     ),
                     label = "b"
@@ -229,11 +231,12 @@ fun WindingPathMap(
                     label = "scale"
                 )
 
+                // ✅ Using blendItNodeSize (90dp) instead of regular nodeSize (78dp)
                 BlendItPlaceholder(
                     isUnlocked = node.isUnlocked,
-                    size = nodeSize,
+                    size = blendItNodeSize,
                     modifier = Modifier.offset(
-                        x = with(density) { xPx.toDp() - nodeSize / 2 },
+                        x = with(density) { xPx.toDp() - blendItNodeSize / 2 },
                         y = with(density) { (yPx.toDp()) + bounce.dp }
                     ),
                     scale = scale
@@ -328,10 +331,11 @@ fun BlendItPlaceholder(
         modifier = modifier.scale(scale),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
+        // ✅ Larger circle for blendIT
         Box(
             Modifier
-                .size(size)
-                .shadow(12.dp, CircleShape)
+                .size(size)  // Now 90dp instead of 78dp
+                .shadow(14.dp, CircleShape)  // Slightly larger shadow
                 .clip(CircleShape)
                 .background(
                     Brush.radialGradient(
@@ -340,17 +344,19 @@ fun BlendItPlaceholder(
                 ),
             contentAlignment = Alignment.Center
         ) {
+            // ✅ Bigger emoji
             Text(
                 text = if (isUnlocked) "📖" else "🔒",
-                fontSize = 32.sp
+                fontSize = 50.sp  // Increased from 32sp
             )
         }
 
-        Spacer(Modifier.height(6.dp))
+        Spacer(modifier = Modifier.height(8.dp))
 
+        // ✅ Larger text
         Text(
             text = "blendIT",
-            fontSize = 11.sp,
+            fontSize = 15.sp,  // Increased from 11sp
             fontWeight = FontWeight.Bold,
             color = color,
             maxLines = 1
@@ -358,7 +364,7 @@ fun BlendItPlaceholder(
 
         Text(
             text = "Soon!",
-            fontSize = 8.sp,
+            fontSize = 9.sp,  // Increased from 8sp
             color = color.copy(alpha = 0.7f)
         )
     }

@@ -40,6 +40,13 @@ android {
 }
 
 dependencies {
+
+    // Material Icons (includes CheckCircle, Close, etc.)
+    implementation("androidx.compose.material:material-icons-core:1.7.4")
+
+    // Material Icons Extended (includes Mic, MicOff, etc.)
+    implementation("androidx.compose.material:material-icons-extended:1.7.4")
+
     // Compose
     val composeBom = platform("androidx.compose:compose-bom:2025.01.00")
     implementation(composeBom)

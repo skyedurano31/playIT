@@ -1,6 +1,9 @@
 package com.playit.app.presentation.hearit
 
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
@@ -13,6 +16,8 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.scale
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
@@ -23,6 +28,7 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
+import kotlinx.coroutines.delay
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -36,6 +42,18 @@ fun HearItScreen(
     val replayCount by viewModel.replayCount.collectAsState()
     val isNextEnabled by viewModel.isNextEnabled.collectAsState()
     val isLoading by viewModel.isLoading.collectAsState()
+
+    // Animation for play button pulse
+    val infiniteTransition = rememberInfiniteTransition(label = "pulse")
+    val buttonPulse by infiniteTransition.animateFloat(
+        initialValue = 1f,
+        targetValue = 1.1f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(1000, easing = EaseInOutQuad),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "pulse"
+    )
 
     LaunchedEffect(phonemeId) {
         viewModel.loadPhoneme(phonemeId)
@@ -65,12 +83,12 @@ fun HearItScreen(
                 .padding(16.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            // Progress indicator (fixed at top)
+            // Progress indicator
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(6.dp)
             ) {
-                listOf("Hear It", "Say It", "Find It").forEachIndexed { index, _ ->
+                listOf("Hear It", "Say It", "Find It").forEachIndexed { index, label ->
                     Box(
                         modifier = Modifier
                             .weight(1f)
@@ -92,7 +110,7 @@ fun HearItScreen(
                     CircularProgressIndicator()
                 }
             } else {
-                // ✅ Scrollable content area (takes remaining space)
+                // Scrollable content area
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -101,124 +119,162 @@ fun HearItScreen(
                     horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    // Compact Card
+                    // Letter and Image Card
                     Card(
                         modifier = Modifier
                             .fillMaxWidth()
                             .wrapContentHeight(),
-                        shape = RoundedCornerShape(24.dp),
-                        elevation = CardDefaults.cardElevation(4.dp),
+                        shape = RoundedCornerShape(28.dp),
+                        elevation = CardDefaults.cardElevation(8.dp),
                         colors = CardDefaults.cardColors(
-                            containerColor = Color.White
+                            containerColor = Color(0xFFFFF3E0)  // Warm, kid-friendly
                         )
                     ) {
                         Column(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(16.dp),
+                                .padding(20.dp),
                             horizontalAlignment = Alignment.CenterHorizontally,
-                            verticalArrangement = Arrangement.spacedBy(8.dp)
+                            verticalArrangement = Arrangement.spacedBy(12.dp)
                         ) {
-                            // Letter
-                            Text(
-                                text = phoneme!!.letter.uppercase(),
-                                fontSize = 64.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.primary,
-                                letterSpacing = 4.sp
-                            )
-
-                            // Image
-                            AsyncImage(
-                                model = ImageRequest.Builder(LocalContext.current)
-                                    .data("file:///android_asset/${phoneme!!.imagePath}")
-                                    .error(android.R.drawable.ic_menu_gallery)
-                                    .build(),
-                                contentDescription = phoneme!!.exampleWord,
-                                modifier = Modifier
-                                    .size(100.dp)
-                                    .clip(RoundedCornerShape(16.dp)),
-                                contentScale = ContentScale.Fit
-                            )
-
-                            // Word pill
+                            // Big Letter with soft glow effect
                             Box(
                                 modifier = Modifier
-                                    .clip(RoundedCornerShape(32.dp))
-                                    .background(MaterialTheme.colorScheme.primary)
-                                    .padding(horizontal = 20.dp, vertical = 8.dp)
+                                    .clip(CircleShape)
+                                    .background(
+                                        Brush.radialGradient(
+                                            colors = listOf(
+                                                MaterialTheme.colorScheme.primary.copy(alpha = 0.1f),
+                                                Color.Transparent
+                                            ),
+                                            radius = 80f
+                                        )
+                                    )
+                                    .padding(16.dp)
+                            ) {
+                                Text(
+                                    text = phoneme!!.letter.uppercase(),
+                                    fontSize = 72.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.primary,
+                                    letterSpacing = 6.sp
+                                )
+                            }
+
+                            // Image with soft shadow
+                            Surface(
+                                modifier = Modifier
+                                    .size(140.dp)
+                                    .clip(RoundedCornerShape(20.dp)),
+                                shadowElevation = 4.dp,
+                                tonalElevation = 0.dp,
+                                color = Color.White
+                            ) {
+                                AsyncImage(
+                                    model = ImageRequest.Builder(LocalContext.current)
+                                        .data("file:///android_asset/${phoneme!!.imagePath}")
+                                        .error(android.R.drawable.ic_menu_gallery)
+                                        .build(),
+                                    contentDescription = phoneme!!.exampleWord,
+                                    modifier = Modifier.fillMaxSize(),
+                                    contentScale = ContentScale.Fit
+                                )
+                            }
+
+                            // Word Pill - Colorful and visible
+                            Surface(
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(40.dp)),
+                                color = MaterialTheme.colorScheme.primary,
+                                shadowElevation = 2.dp
                             ) {
                                 Text(
                                     text = phoneme!!.exampleWord.uppercase(),
-                                    fontSize = 14.sp,
+                                    fontSize = 16.sp,
                                     fontWeight = FontWeight.Bold,
                                     color = Color.White,
-                                    letterSpacing = 1.sp
+                                    letterSpacing = 2.sp,
+                                    modifier = Modifier.padding(horizontal = 24.dp, vertical = 12.dp)
                                 )
                             }
                         }
                     }
 
                     // Mascot instruction
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clip(RoundedCornerShape(20.dp))
-                            .background(Color(0xFFE8F4FD))
-                            .padding(12.dp),
-                        contentAlignment = Alignment.Center
+                    Surface(
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(24.dp),
+                        color = Color(0xFFE8F4FD)
                     ) {
                         Text(
                             text = if (replayCount == 0) {
-                                "🐻 Tap the button to hear the sound!"
+                                "🐻 Tap the 🎵 button to hear the sound!"
                             } else {
                                 "🎉 Great! Listen again or tap Next."
                             },
-                            fontSize = 13.sp,
+                            fontSize = 14.sp,
                             textAlign = TextAlign.Center,
-                            color = Color(0xFF333333)
+                            color = Color(0xFF333333),
+                            fontWeight = FontWeight.Medium,
+                            modifier = Modifier.padding(16.dp)
                         )
                     }
 
-                    // Play button
+                    // Play Button with Pulse Animation
                     Box(
                         modifier = Modifier
-                            .size(72.dp)
+                            .size(if (replayCount == 0) 80.dp else 72.dp)
+                            .scale(if (replayCount == 0) buttonPulse else 1f)
                             .clip(CircleShape)
-                            .background(MaterialTheme.colorScheme.primary),
+                            .background(
+                                Brush.horizontalGradient(
+                                    colors = listOf(
+                                        MaterialTheme.colorScheme.primary,
+                                        MaterialTheme.colorScheme.primary.copy(alpha = 0.8f)
+                                    )
+                                )
+                            )
+                            .clickable { viewModel.playAudio() },
                         contentAlignment = Alignment.Center
                     ) {
-                        IconButton(
-                            onClick = { viewModel.playAudio() },
-                            modifier = Modifier.fillMaxSize()
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.PlayArrow,
-                                contentDescription = "Play",
-                                tint = Color.White,
-                                modifier = Modifier.size(36.dp)
-                            )
-                        }
+                        Icon(
+                            imageVector = Icons.Default.PlayArrow,
+                            contentDescription = "Play",
+                            tint = Color.White,
+                            modifier = Modifier.size(40.dp)
+                        )
                     }
 
-                    // Replay counter
+                    // Replay counter with animation
                     if (replayCount > 0) {
-                        Row(
-                            horizontalArrangement = Arrangement.spacedBy(4.dp)
-                        ) {
-                            repeat(minOf(replayCount, 5)) {
-                                Box(
-                                    modifier = Modifier
-                                        .size(6.dp)
-                                        .clip(CircleShape)
-                                        .background(MaterialTheme.colorScheme.primary)
-                                )
+                        AnimatedContent(
+                            targetState = replayCount,
+                            label = "replay"
+                        ) { count ->
+                            Row(
+                                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                                modifier = Modifier.padding(top = 8.dp)
+                            ) {
+                                repeat(minOf(count, 5)) { index ->
+                                    val scale by animateFloatAsState(
+                                        targetValue = 1f,
+                                        animationSpec = spring(),
+                                        label = "dot_$index"
+                                    )
+                                    Box(
+                                        modifier = Modifier
+                                            .size(8.dp)
+                                            .scale(scale)
+                                            .clip(CircleShape)
+                                            .background(MaterialTheme.colorScheme.primary)
+                                    )
+                                }
                             }
                         }
                     }
                 }
 
-                // ✅ NEXT BUTTON - Fixed at bottom, NOT cropped
+                // Next Button
                 Button(
                     onClick = {
                         viewModel.saveProgress(phonemeId) {
@@ -228,10 +284,18 @@ fun HearItScreen(
                     enabled = isNextEnabled,
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(48.dp),
-                    shape = RoundedCornerShape(16.dp)
+                        .height(52.dp),
+                    shape = RoundedCornerShape(16.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = if (isNextEnabled) Color(0xFF4CAF50) else Color.Gray
+                    )
                 ) {
-                    Text("Next →", fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                    Text(
+                        text = if (isNextEnabled) "Next →" else "Listen first!",
+                        fontSize = 16.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = Color.White
+                    )
                 }
 
                 Spacer(modifier = Modifier.height(8.dp))
