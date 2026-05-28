@@ -10,7 +10,7 @@ class SpeechValidator @Inject constructor() {
         "M"  to listOf("m", "em", "muh", "mmm", "ma", "me", "mm", "um", "am", "mom", "him", "ham"),
         "A"  to listOf("a", "ah", "ay", "aah", "aa", "apple", "at", "an"),
         "S"  to listOf("s", "es", "ss", "sss", "se", "see", "say", "so", "sun"),
-        "I"  to listOf("i", "ih", "ee", "iy", "it", "in", "is"),
+        "I"  to listOf("i", "ih", "I", "iii", "ihhh", "iiih", "ee","iy"),
         "N"  to listOf("n", "en", "nn", "nnn", "no", "now", "knee"),
         "T"  to listOf("t", "te", "tuh", "tt", "to", "too", "the", "tea"),
         "O"  to listOf("o", "oh", "oo", "aw", "or", "on", "of"),
