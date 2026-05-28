@@ -31,4 +31,12 @@ class SayItAttemptRepositoryImpl @Inject constructor(
     ): List<SayItAttempt> {
         return sayItAttemptDao.getAttempts(profileId, phonemeId)
     }
+
+    override suspend fun getCorrectCount(profileId: Int, phonemeId: Int): Int {
+        return sayItAttemptDao.getCorrectCount(profileId, phonemeId)
+    }
+
+    override suspend fun getTotalCount(profileId: Int, phonemeId: Int): Int {
+        return sayItAttemptDao.getTotalCount(profileId, phonemeId)
+    }
 }

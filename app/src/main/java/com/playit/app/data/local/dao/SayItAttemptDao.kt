@@ -13,4 +13,10 @@ public interface SayItAttemptDao {
 
     @Query("SELECT * FROM say_it_attempt WHERE profileId = :profileId AND phonemeId = :phonemeId")
     suspend fun getAttempts(profileId: Int, phonemeId: Int): List<SayItAttempt>
+
+    @Query("SELECT COUNT(*) FROM say_it_attempt WHERE profileId = :profileId AND phonemeId = :phonemeId AND isCorrect = 1")
+    suspend fun getCorrectCount(profileId: Int, phonemeId: Int): Int
+
+    @Query("SELECT COUNT(*) FROM say_it_attempt WHERE profileId = :profileId AND phonemeId = :phonemeId")
+    suspend fun getTotalCount(profileId: Int, phonemeId: Int): Int
 }
