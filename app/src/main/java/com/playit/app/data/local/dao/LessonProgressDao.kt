@@ -23,4 +23,7 @@ public interface LessonProgressDao {
 
     @Query("SELECT isCompleted FROM lesson_progress WHERE profileId = :profileId AND phonemeId = :phonemeId")
     suspend fun isCompleted(profileId: Int, phonemeId: Int): Int?
+
+    @Query("SELECT COUNT(*) FROM lesson_progress WHERE profileId = :profileId AND isCompleted = 1")
+    suspend fun getAllCompletedCount(profileId: Int): Int
 }

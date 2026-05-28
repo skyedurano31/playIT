@@ -70,4 +70,8 @@ class LessonProgressRepositoryImpl @Inject constructor(
             )
         }
     }
+
+    override suspend fun getAllCompletedCount(profileId: Int): Int {
+        return lessonProgressDao.getAllCompletedCount(profileId)
+    }
 }

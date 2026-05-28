@@ -15,5 +15,7 @@ interface LessonProgressRepository {
         starsEarned: Int,
         heartsLost: Int
     )
+    suspend fun getAllCompletedCount(profileId: Int): Int
+
 
 }
