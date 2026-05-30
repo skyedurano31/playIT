@@ -82,7 +82,7 @@ object DatabaseSeeder {
         LetterGroupMember(groupId = 4, phonemeId = 28, position = 7)  // NY
     )
     fun getBlendItWords() = listOf(
-        // Group 1 — M S A I O BE
+        // Group 1 — M S A I O B E
         BlendItWord(groupId = 1, word = "SAM", wordPattern = "CVC", audioPath = "audio/words/sam.mp3", imagePath = "images/words/sam.png"),
         BlendItWord(groupId = 1, word = "SIM", wordPattern = "CVC", audioPath = "audio/words/sim.mp3", imagePath = "images/words/sim.png"),
         BlendItWord(groupId = 1, word = "AIM", wordPattern = "VVC", audioPath = "audio/words/aim.mp3", imagePath = "images/words/aim.png"),
