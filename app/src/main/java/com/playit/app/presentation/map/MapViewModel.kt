@@ -3,8 +3,10 @@ package com.playit.app.presentation.map
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.playit.app.domain.model.MapNode
+import com.playit.app.domain.repository.BlendItProgressRepository
 import com.playit.app.domain.repository.PhonemeRepository
 import com.playit.app.domain.repository.LessonProgressRepository
+import com.playit.app.domain.usecase.GroupUnlockManager
 import com.playit.app.domain.usecase.SessionManager
 import com.playit.app.domain.usecase.UnlockManager
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -17,7 +19,9 @@ import javax.inject.Inject
 class MapViewModel @Inject constructor(
     private val phonemeRepository: PhonemeRepository,
     private val lessonProgressRepository: LessonProgressRepository,
-    private val unlockManager: UnlockManager
+    private val blendItProgressRepository: BlendItProgressRepository,
+    private val unlockManager: UnlockManager,
+    private val groupUnlockManager: GroupUnlockManager
 ) : ViewModel() {
 
     private val _mapNodes = MutableStateFlow<List<MapNode>>(emptyList())
@@ -26,36 +30,46 @@ class MapViewModel @Inject constructor(
     private val _isLoading = MutableStateFlow(false)
     val isLoading: StateFlow<Boolean> = _isLoading
 
-    init {
-        loadMapNodes()
-    }
+    init { loadMapNodes() }
 
     fun loadMapNodes() {
         viewModelScope.launch {
             _isLoading.value = true
-
-            // ✅ FIXED: Handle null profileId
             val profileId = SessionManager.activeProfileId
-            if (profileId == null) {
-                _isLoading.value = false
-                _mapNodes.value = emptyList()
-                return@launch
-            }
-
             val phonemes = phonemeRepository.getAllPhonemesOrdered()
             val progressList = lessonProgressRepository.getProgressByProfile(profileId)
             val progressMap = progressList.associateBy { it.phonemeId }
 
-            // ✅ FIXED: Added .reversed() - m (first letter) at BOTTOM
-            val nodes = phonemes.map { phoneme ->
-                val progress = progressMap[phoneme.phonemeId]
-                MapNode.LetterNode(
-                    phonemeId = phoneme.phonemeId,
-                    letter = phoneme.letter,
-                    isUnlocked = unlockManager.isUnlocked(profileId, phoneme.phonemeId),
-                    starsEarned = progress?.starsEarned ?: 0
+            val nodes = mutableListOf<MapNode>()
+
+            // chunk by 7 to match your new group size
+            val groups = phonemes.chunked(7)
+            groups.forEachIndexed { groupIndex, group ->
+                val groupId = groupIndex + 1
+
+                group.forEach { phoneme ->
+                    val progress = progressMap[phoneme.phonemeId]
+                    nodes.add(
+                        MapNode.LetterNode(
+                            phonemeId = phoneme.phonemeId,
+                            letter = phoneme.letter,
+                            isUnlocked = unlockManager.isUnlocked(profileId, phoneme.phonemeId),
+                            starsEarned = progress?.starsEarned ?: 0
+                        )
+                    )
+                }
+
+                val isGroupComplete = groupUnlockManager.isGroupComplete(profileId, groupId)
+                val blendItProgress = blendItProgressRepository.getProgress(profileId, groupId)
+                nodes.add(
+                    MapNode.BlendItNode(
+                        groupId = groupId,
+                        groupNumber = groupId,
+                        isUnlocked = isGroupComplete,
+                        starsEarned = blendItProgress?.starsEarned ?: 0
+                    )
                 )
-            }.reversed()  // ✅ BOTTOM TO TOP
+            }
 
             _mapNodes.value = nodes
             _isLoading.value = false

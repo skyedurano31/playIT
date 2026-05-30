@@ -7,6 +7,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -20,28 +21,38 @@ import androidx.compose.ui.graphics.*
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.*
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.compose.ui.unit.times
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.playit.app.domain.model.MapNode
-import kotlinx.coroutines.delay
+import kotlin.math.cos
+import kotlin.math.sin
 
-// 🌈 Kid-friendly colors
-val colorLocked = Color(0xFFB0BEC5)
-val colorNext = Color(0xFFFFD54F)
-val colorOneStar = Color(0xFF64B5F6)
-val colorTwoStar = Color(0xFF81C784)
-val colorThreeStar = Color(0xFF4CAF50)
-val colorPath = Color(0xFFFFF176)
-val colorBlendIt = Color(0xFF9C27B0)
-val colorBlendItLocked = Color(0xFFCE93D8)
-val colorBlendPath = Color(0xFFFFB74D)
+// 🎨 Kid-Friendly Colors
+val colorLocked = Color(0xFF9E9E9E)
+val colorUnstarred = Color(0xFFFFB74D)  // Warm orange
+val colorOneStar = Color(0xFF64B5F6)    // Light blue
+val colorTwoStar = Color(0xFF81C784)    // Soft green
+val colorThreeStar = Color(0xFFFFD54F)  // Golden yellow
+
+// 🌟 Glow colors for unlocked nodes
+val colorGlow = Color(0x33FFD54F)
+
+// 🎪 Playful backgrounds
+val colorPathUnlocked = Color(0xFFFFCC80)  // Warm path
+val colorPathLocked = Color(0xFFE0E0E0)     // Gray path
+val colorBackground = Color(0xFFFDF5E6)     // Cream background
 
 @Composable
 fun MapScreen(
     onLetterSelected: (Int) -> Unit,
+    onBlendItSelected: (Int) -> Unit,
     onDashboardClicked: () -> Unit,
     viewModel: MapViewModel = hiltViewModel()
 ) {
@@ -50,7 +61,6 @@ fun MapScreen(
     val scrollState = rememberScrollState()
 
     val lifecycleOwner = LocalLifecycleOwner.current
-
     DisposableEffect(lifecycleOwner) {
         val observer = LifecycleEventObserver { _, event ->
             if (event == Lifecycle.Event.ON_RESUME) {
@@ -61,55 +71,82 @@ fun MapScreen(
         onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
     }
 
-    LaunchedEffect(mapNodes, isLoading) {
-        if (mapNodes.isNotEmpty() && !isLoading) {
-            delay(120)
-            scrollState.animateScrollTo(scrollState.maxValue)
+    // Auto-scroll to bottom (M) on load
+    LaunchedEffect(mapNodes) {
+        if (mapNodes.isNotEmpty()) {
+            scrollState.scrollTo(scrollState.maxValue)
         }
     }
 
-    Column(Modifier.fillMaxSize()) {
+    Column(modifier = Modifier.fillMaxSize()) {
+        // 🎨 Playful Top Bar
         Row(
             modifier = Modifier
                 .fillMaxWidth()
                 .background(
-                    Brush.horizontalGradient(
-                        listOf(Color(0xFFFFD54F), Color(0xFFFF8A65))
+                    brush = Brush.horizontalGradient(
+                        colors = listOf(Color(0xFFFF6B6B), Color(0xFFFF8E53))
                     )
                 )
-                .padding(14.dp),
+                .padding(horizontal = 16.dp, vertical = 14.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Text(
-                text = "👾 PlayIT",
-                color = Color.White,
-                fontSize = 22.sp,
-                fontWeight = FontWeight.Bold
-            )
-            TextButton(onClick = onDashboardClicked) {
-                Text("Parent", color = Color.White)
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    text = "",
+                    fontSize = 28.sp
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(
+                    text = "playIT",
+                    color = Color.White,
+                    fontSize = 26.sp,
+                    fontWeight = FontWeight.Bold
+                )
+            }
+
+            Card(
+                shape = RoundedCornerShape(30.dp),
+                colors = CardDefaults.cardColors(containerColor = Color.White.copy(alpha = 0.2f))
+            ) {
+                TextButton(onClick = onDashboardClicked) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text("📊", fontSize = 16.sp)
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text(
+                            text = "Parent Zone",
+                            color = Color.White,
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.Medium
+                        )
+                    }
+                }
             }
         }
 
         if (isLoading) {
-            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                CircularProgressIndicator(color = Color(0xFFFFC107))
+            Box(
+                modifier = Modifier.fillMaxSize(),
+                contentAlignment = Alignment.Center
+            ) {
+                CircularProgressIndicator(color = Color(0xFFFF6B6B))
             }
         } else {
             Box(
-                Modifier
+                modifier = Modifier
                     .fillMaxSize()
-                    .background(
-                        Brush.verticalGradient(
-                            listOf(Color(0xFFFFF8E1), Color(0xFFFFECB3))
-                        )
-                    )
+                    .background(colorBackground)
                     .verticalScroll(scrollState)
             ) {
                 WindingPathMap(
                     nodes = mapNodes,
-                    onNodeClick = { if (it.isUnlocked) onLetterSelected(it.phonemeId) }
+                    onNodeClick = { node ->
+                        if (node.isUnlocked) onLetterSelected(node.phonemeId)
+                    },
+                    onBlendItClick = { node ->
+                        if (node.isUnlocked) onBlendItSelected(node.groupId)
+                    }
                 )
             }
         }
@@ -119,165 +156,182 @@ fun MapScreen(
 @Composable
 fun WindingPathMap(
     nodes: List<MapNode>,
-    onNodeClick: (MapNode.LetterNode) -> Unit
+    onNodeClick: (MapNode.LetterNode) -> Unit,
+    onBlendItClick: (MapNode.BlendItNode) -> Unit
 ) {
-    val nodeSize = 78.dp
-    val blendItNodeSize = 90.dp  // ✅ blendIT nodes are BIGGER (90dp vs 78dp)
-    val rowHeight = 135.dp  // ✅ Increased row height to fit bigger nodes
+    val nodeSize = 80.dp
+    val blendItWidth = 120.dp
+    val blendItHeight = 50.dp
+    val rowHeight = 130.dp
+    val screenWidth = 360.dp
+    val leftX = 70.dp
+    val rightX = screenWidth - 70.dp
 
+    val totalHeight = (nodes.size + 1) * rowHeight + 100.dp
     val density = LocalDensity.current
-    val leftX = 80.dp
-    val rightX = 280.dp
 
-    val leftXPx = with(density) { leftX.toPx() }
-    val rightXPx = with(density) { rightX.toPx() }
-    val nodeSizePx = with(density) { nodeSize.toPx() }
-    val blendItNodeSizePx = with(density) { blendItNodeSize.toPx() }
-    val rowHeightPx = with(density) { rowHeight.toPx() }
-
-    // Get letter nodes in ORIGINAL order (m, s, a, i, o, b, e...)
-    val letterNodes = nodes.filterIsInstance<MapNode.LetterNode>()
-
-    // Reverse for bottom-to-top counting, insert blendIT, then reverse back
-    val nodesFromBottom = letterNodes.reversed()
-
-    val combinedFromBottom = mutableListOf<Pair<MapNode, Boolean>>()
-
-    nodesFromBottom.forEachIndexed { index, letterNode ->
-        combinedFromBottom.add(Pair(letterNode, false))
-
-        // Add blendIT after every 5th letter from BOTTOM
-        if ((index + 1) % 5 == 0 && index < nodesFromBottom.size - 1) {
-            val placeholderNode = MapNode.LetterNode(
-                phonemeId = 1000 + ((index + 1) / 5),
-                letter = "📖",
-                isUnlocked = letterNode.isUnlocked,
-                starsEarned = 0
-            )
-            combinedFromBottom.add(Pair(placeholderNode, true))
-        }
-    }
-
-    // Reverse back for rendering (bottom to top display)
-    val combinedNodes = combinedFromBottom.reversed()
+    // Display nodes as-is (already bottom-to-top from ViewModel)
+    val displayNodes = nodes
 
     Box(
-        Modifier
+        modifier = Modifier
             .fillMaxWidth()
-            .height(with(density) { ((combinedNodes.size + 1) * rowHeightPx).toDp() })
+            .height(totalHeight)
     ) {
+        val nodeSizePx = with(density) { nodeSize.toPx() }
+        val blendItHeightPx = with(density) { blendItHeight.toPx() }
+        val rowHeightPx = with(density) { rowHeight.toPx() }
+        val leftXPx = with(density) { leftX.toPx() }
+        val rightXPx = with(density) { rightX.toPx() }
+        val totalHeightPx = with(density) { totalHeight.toPx() }
 
-        // ✨ PATH
-        Canvas(Modifier.fillMaxSize()) {
-            for (i in 0 until combinedNodes.size - 1) {
-                val (currentNode, isCurrentBlendIt) = combinedNodes[i]
-                val (nextNode, isNextBlendIt) = combinedNodes[i + 1]
+        // 🎨 Draw glowing path with gradient
+        Canvas(modifier = Modifier.fillMaxSize()) {
+            displayNodes.forEachIndexed { index, node ->
+                if (index < displayNodes.size - 1) {
+                    val isLeft = index % 2 == 0
+                    val nextIsLeft = (index + 1) % 2 == 0
 
-                val startX = if (i % 2 == 0) leftXPx else rightXPx
-                val endX = if ((i + 1) % 2 == 0) leftXPx else rightXPx
+                    val currentX = if (isLeft) leftXPx else rightXPx
+                    val nextX = if (nextIsLeft) leftXPx else rightXPx
 
-                val startY = (i + 1) * rowHeightPx
-                val endY = (i + 2) * rowHeightPx
+                    val currentCenterY = when (node) {
+                        is MapNode.LetterNode ->
+                            totalHeightPx - (index + 1) * rowHeightPx - nodeSizePx / 2
+                        is MapNode.BlendItNode ->
+                            totalHeightPx - (index + 1) * rowHeightPx - blendItHeightPx / 2
+                    }
 
-                val isBlendItPath = isCurrentBlendIt || isNextBlendIt
-                val isCompleted = if (currentNode is MapNode.LetterNode && !isCurrentBlendIt) {
-                    currentNode.starsEarned > 0
-                } else false
+                    val nextNode = displayNodes[index + 1]
+                    val nextCenterY = when (nextNode) {
+                        is MapNode.LetterNode ->
+                            totalHeightPx - (index + 2) * rowHeightPx - nodeSizePx / 2
+                        is MapNode.BlendItNode ->
+                            totalHeightPx - (index + 2) * rowHeightPx - blendItHeightPx / 2
+                    }
 
-                val pathColor = when {
-                    isBlendItPath -> colorBlendPath
-                    isCompleted -> colorPath
-                    else -> Color(0xFFFFE082)
-                }
+                    val isUnlocked = when (node) {
+                        is MapNode.LetterNode -> node.isUnlocked
+                        is MapNode.BlendItNode -> node.isUnlocked
+                    }
 
-                val path = Path().apply {
-                    moveTo(startX, startY)
-                    cubicTo(
-                        startX, startY + 100f,
-                        endX, endY - 100f,
-                        endX, endY
+                    // 🎨 Gradient path colors
+                    val pathGradient = Brush.linearGradient(
+                        colors = if (isUnlocked)
+                            listOf(Color(0xFFFFB74D), Color(0xFFFFCC80))
+                        else
+                            listOf(Color(0xFFBDBDBD), Color(0xFFE0E0E0))
                     )
-                }
 
-                drawPath(
-                    path = path,
-                    color = pathColor,
-                    style = Stroke(width = 10f, cap = StrokeCap.Round)
-                )
+                    val path = Path().apply {
+                        moveTo(currentX, currentCenterY)
+                        cubicTo(
+                            currentX, currentCenterY - rowHeightPx * 0.5f,
+                            nextX, nextCenterY + rowHeightPx * 0.5f,
+                            nextX, nextCenterY
+                        )
+                    }
+
+                    // Draw glow effect
+                    drawPath(
+                        path = path,
+                        color = if (isUnlocked) Color(0x33FFB74D) else Color.Transparent,
+                        style = Stroke(width = 16f, cap = StrokeCap.Round)
+                    )
+
+                    drawPath(
+                        path = path,
+                        brush = pathGradient,
+                        style = Stroke(width = 8f, cap = StrokeCap.Round)
+                    )
+
+                    // ✨ Sparkles on unlocked paths
+                    if (isUnlocked && index % 2 == 0) {
+                        val t = 0.3f
+                        val midX = (currentX + nextX) / 2
+                        val midY = (currentCenterY + nextCenterY) / 2
+                        drawCircle(
+                            color = Color(0xFFFFD54F),
+                            radius = 4f,
+                            center = Offset(midX, midY)
+                        )
+                    }
+                }
             }
         }
 
-        // 🎮 NODES
-        combinedNodes.forEachIndexed { index, (node, isBlendIt) ->
+        // 🎨 Draw nodes with bounce animation
+        displayNodes.forEachIndexed { index, node ->
             val isLeft = index % 2 == 0
-            val xPx = if (isLeft) leftXPx else rightXPx
-            val yPx = (index + 1) * rowHeightPx
 
-            // Different bounce animation for blendIT nodes
-            val bounce = rememberInfiniteTransition(label = "bounce_$index")
-                .animateFloat(
-                    0f, if (isBlendIt) 8f else 10f,  // ✅ Slightly less bounce for blendIT
-                    infiniteRepeatable(
-                        tween(if (isBlendIt) 1000 else 900),
-                        RepeatMode.Reverse
-                    ),
-                    label = "b"
-                ).value
+            when (node) {
+                is MapNode.LetterNode -> {
+                    val xOffset = if (isLeft) leftX - nodeSize / 2
+                    else rightX - nodeSize / 2
+                    val yOffset = totalHeight - (index + 1) * rowHeight - nodeSize
 
-            if (isBlendIt && node is MapNode.LetterNode) {
-                val scale by animateFloatAsState(
-                    targetValue = if (node.isUnlocked) 1f else 0.85f,
-                    animationSpec = spring(),
-                    label = "scale"
-                )
+                    LetterNodeCircle(
+                        node = node,
+                        size = nodeSize,
+                        modifier = Modifier
+                            .offset(x = xOffset, y = yOffset)
+                    ) {
+                        if (node.isUnlocked) onNodeClick(node)
+                    }
+                }
+                is MapNode.BlendItNode -> {
+                    val xOffset = if (isLeft) leftX - blendItWidth / 2
+                    else rightX - blendItWidth / 2
+                    val yOffset = totalHeight - (index + 1) * rowHeight - blendItHeight
 
-                // ✅ Using blendItNodeSize (90dp) instead of regular nodeSize (78dp)
-                BlendItPlaceholder(
-                    isUnlocked = node.isUnlocked,
-                    size = blendItNodeSize,
-                    modifier = Modifier.offset(
-                        x = with(density) { xPx.toDp() - blendItNodeSize / 2 },
-                        y = with(density) { (yPx.toDp()) + bounce.dp }
-                    ),
-                    scale = scale
-                )
-            } else if (node is MapNode.LetterNode && !isBlendIt) {
-                val scale by animateFloatAsState(
-                    targetValue = if (node.isUnlocked) 1f else 0.85f,
-                    animationSpec = spring(),
-                    label = "scale"
-                )
-
-                LetterNode(
-                    node = node,
-                    size = nodeSize,
-                    modifier = Modifier.offset(
-                        x = with(density) { xPx.toDp() - nodeSize / 2 },
-                        y = with(density) { (yPx.toDp()) + bounce.dp }
-                    ),
-                    scale = scale,
-                    onClick = { onNodeClick(node) }
-                )
+                    BlendItNodeBanner(
+                        node = node,
+                        modifier = Modifier
+                            .offset(x = xOffset, y = yOffset)
+                    ) {
+                        if (node.isUnlocked) onBlendItClick(node)
+                    }
+                }
             }
         }
     }
 }
 
 @Composable
-fun LetterNode(
+fun LetterNodeCircle(
     node: MapNode.LetterNode,
     size: Dp,
-    modifier: Modifier,
-    scale: Float,
+    modifier: Modifier = Modifier,
     onClick: () -> Unit
 ) {
-    val color = when {
+    // 🎨 Playful color scheme
+    val nodeColor = when {
         !node.isUnlocked -> colorLocked
         node.starsEarned == 3 -> colorThreeStar
         node.starsEarned == 2 -> colorTwoStar
         node.starsEarned == 1 -> colorOneStar
-        else -> colorNext
+        else -> colorUnstarred
     }
+
+    // ✨ Glow animation for unlocked
+    val glowAlpha by animateFloatAsState(
+        targetValue = if (node.isUnlocked && node.starsEarned > 0) 0.3f else 0f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(1000, easing = FastOutSlowInEasing),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "glow"
+    )
+
+    // 🎯 Bounce animation for unlocked
+    val scale by animateFloatAsState(
+        targetValue = if (node.isUnlocked) 1f else 0.85f,
+        animationSpec = spring(
+            dampingRatio = Spring.DampingRatioLowBouncy,
+            stiffness = Spring.StiffnessLow
+        ),
+        label = "scale"
+    )
 
     Column(
         modifier = modifier
@@ -285,87 +339,181 @@ fun LetterNode(
             .clickable(enabled = node.isUnlocked) { onClick() },
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
+//        // 🌟 Glow background
+//        if (node.isUnlocked && node.starsEarned > 0) {
+//            Box(
+//                modifier = Modifier
+//                    .size(size + 12.dp)
+//                    .clip(CircleShape)
+//                    .background(colorGlow.copy(alpha = glowAlpha))
+//            )
+//        }
+
+        // 📦 Main letter circle
         Box(
-            Modifier
+            modifier = Modifier
                 .size(size)
-                .shadow(12.dp, CircleShape)
+                .shadow(
+                    elevation = if (node.isUnlocked) 8.dp else 4.dp,
+                    shape = CircleShape,
+                    clip = false
+                )
                 .clip(CircleShape)
                 .background(
-                    Brush.radialGradient(
-                        listOf(color, color.copy(alpha = 0.7f))
+                    brush = if (node.isUnlocked && node.starsEarned > 0)
+                        Brush.radialGradient(
+                            colors = listOf(nodeColor, nodeColor.copy(alpha = 0.8f))
+                        )
+                    else Brush.verticalGradient(
+                        colors = listOf(nodeColor, nodeColor.copy(alpha = 0.7f))
                     )
                 ),
             contentAlignment = Alignment.Center
         ) {
-            Text(
-                text = if (node.isUnlocked) node.letter.uppercase() else "🔒",
-                fontSize = 30.sp,
-                fontWeight = FontWeight.Bold,
-                color = Color.White
-            )
-        }
-
-        Spacer(Modifier.height(6.dp))
-
-        Row {
-            repeat(3) {
+            if (!node.isUnlocked) {
+                Text(text = "🔒", fontSize = 28.sp)
+            } else {
                 Text(
-                    text = if (it < node.starsEarned) "⭐" else "☆",
-                    fontSize = 14.sp
+                    text = node.letter,
+                    color = Color.White,
+                    fontSize = 32.sp,
+                    fontWeight = FontWeight.Bold,
+                    textAlign = TextAlign.Center
                 )
             }
+        }
+
+        Spacer(modifier = Modifier.height(6.dp))
+
+        // ⭐ Star display with animation
+        if (node.starsEarned > 0) {
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(4.dp),
+                modifier = Modifier.shadow(2.dp, CircleShape)
+            ) {
+                repeat(3) { index ->
+                    val starScale by animateFloatAsState(
+                        targetValue = if (index < node.starsEarned) 1.2f else 1f,
+                        animationSpec = repeatable(
+                            iterations = 3,
+                            animation = tween(200)
+                        ),
+                        label = "star$index"
+                    )
+                    Text(
+                        text = if (index < node.starsEarned) "⭐" else "☆",
+                        fontSize = 14.sp,
+                        modifier = Modifier.scale(starScale)
+                    )
+                }
+            }
+        } else if (node.isUnlocked) {
+            Text(
+                text = "✨ tap to play ✨",
+                fontSize = 10.sp,
+                color = Color(0xFFFF8E53),
+                fontWeight = FontWeight.Medium
+            )
         }
     }
 }
 
 @Composable
-fun BlendItPlaceholder(
-    isUnlocked: Boolean,
-    size: Dp,
-    modifier: Modifier,
-    scale: Float
+fun BlendItNodeBanner(
+    node: MapNode.BlendItNode,
+    modifier: Modifier = Modifier,
+    onClick: () -> Unit
 ) {
-    val color = if (isUnlocked) colorBlendIt else colorBlendItLocked
+    val bgColor = when {
+        !node.isUnlocked -> colorLocked
+        node.starsEarned > 0 -> Color(0xFF9C27B0)  // Purple for completed
+        else -> Color(0xFF7B1FA2)  // Darker purple for available
+    }
+
+    // 🎯 Scale animation for unlocked
+    val scale by animateFloatAsState(
+        targetValue = if (node.isUnlocked) 1f else 0.9f,
+        animationSpec = spring(
+            dampingRatio = Spring.DampingRatioLowBouncy,
+            stiffness = Spring.StiffnessLow
+        ),
+        label = "scale"
+    )
+
+    // ✨ Pulsing effect for available
+    val pulse by animateFloatAsState(
+        targetValue = if (node.isUnlocked && node.starsEarned == 0) 1.05f else 1f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(1000, easing = FastOutSlowInEasing),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "pulse"
+    )
 
     Column(
-        modifier = modifier.scale(scale),
+        modifier = modifier
+            .scale(scale * pulse)
+            .clickable(enabled = node.isUnlocked) { onClick() },
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        // ✅ Larger circle for blendIT
         Box(
-            Modifier
-                .size(size)  // Now 90dp instead of 78dp
-                .shadow(14.dp, CircleShape)  // Slightly larger shadow
-                .clip(CircleShape)
+            modifier = Modifier
+                .width(120.dp)
+                .height(50.dp)
+                .shadow(
+                    elevation = if (node.isUnlocked) 6.dp else 3.dp,
+                    shape = RoundedCornerShape(25.dp),
+                    clip = false
+                )
+                .clip(RoundedCornerShape(25.dp))
                 .background(
-                    Brush.radialGradient(
-                        listOf(color, color.copy(alpha = 0.7f))
+                    brush = Brush.horizontalGradient(
+                        colors = listOf(bgColor, bgColor.copy(alpha = 0.85f))
                     )
                 ),
             contentAlignment = Alignment.Center
         ) {
-            // ✅ Bigger emoji
-            Text(
-                text = if (isUnlocked) "📖" else "🔒",
-                fontSize = 50.sp  // Increased from 32sp
-            )
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = if (node.isUnlocked) "🎮" else "🔒",
+                    fontSize = 20.sp
+                )
+                Text(
+                    text = "Blend It",
+                    color = Color.White,
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.Bold
+                )
+                if (node.isUnlocked && node.starsEarned == 0) {
+                    Text(
+                        text = "✨",
+                        fontSize = 14.sp
+                    )
+                }
+            }
         }
 
-        Spacer(modifier = Modifier.height(8.dp))
-
-        // ✅ Larger text
-        Text(
-            text = "blendIT",
-            fontSize = 15.sp,  // Increased from 11sp
-            fontWeight = FontWeight.Bold,
-            color = color,
-            maxLines = 1
-        )
-
-        Text(
-            text = "Soon!",
-            fontSize = 9.sp,  // Increased from 8sp
-            color = color.copy(alpha = 0.7f)
-        )
+        if (node.starsEarned > 0) {
+            Spacer(modifier = Modifier.height(4.dp))
+            Row(horizontalArrangement = Arrangement.spacedBy(3.dp)) {
+                repeat(3) { index ->
+                    Text(
+                        text = if (index < node.starsEarned) "⭐" else "☆",
+                        fontSize = 11.sp
+                    )
+                }
+            }
+        } else if (node.isUnlocked) {
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(
+                text = "📝 word game",
+                fontSize = 9.sp,
+                color = Color(0xFF9C27B0),
+                fontWeight = FontWeight.Medium
+            )
+        }
     }
 }
