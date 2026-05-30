@@ -38,6 +38,7 @@ object DatabaseModule {
                         db.phonemeDao().insertAll(DatabaseSeeder.getPhonemes())
                         db.letterGroupDao().insertAll(DatabaseSeeder.getLetterGroups())
                         db.letterGroupMemberDao().insertAll(DatabaseSeeder.getLetterGroupMembers())
+                        db.blendItWordDao().insertAll(DatabaseSeeder.getBlendItWords())
                     }
                 }
             })
