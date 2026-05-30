@@ -1,5 +1,6 @@
 package com.playit.app.data.local.database
 
+import com.playit.app.data.local.entity.BlendItWord
 import com.playit.app.data.local.entity.LetterGroup
 import com.playit.app.data.local.entity.LetterGroupMember
 import com.playit.app.data.local.entity.Phoneme
@@ -41,47 +42,72 @@ object DatabaseSeeder {
         LetterGroup(groupId = 1, groupNumber = 1),
         LetterGroup(groupId = 2, groupNumber = 2),
         LetterGroup(groupId = 3, groupNumber = 3),
-        LetterGroup(groupId = 4, groupNumber = 4),
-        LetterGroup(groupId = 5, groupNumber = 5),
-        LetterGroup(groupId = 6, groupNumber = 6),
-        LetterGroup(groupId = 7, groupNumber = 7)
+        LetterGroup(groupId = 4, groupNumber = 4)
     )
 
     fun getLetterGroupMembers() = listOf(
-        // Group 1 — M A S I
-        LetterGroupMember(groupId = 1, phonemeId = 1,  position = 1),
-        LetterGroupMember(groupId = 1, phonemeId = 2,  position = 2),
-        LetterGroupMember(groupId = 1, phonemeId = 3,  position = 3),
-        LetterGroupMember(groupId = 1, phonemeId = 4,  position = 4),
-        // Group 2 — N T O L
-        LetterGroupMember(groupId = 2, phonemeId = 5,  position = 1),
-        LetterGroupMember(groupId = 2, phonemeId = 6,  position = 2),
-        LetterGroupMember(groupId = 2, phonemeId = 7,  position = 3),
-        LetterGroupMember(groupId = 2, phonemeId = 8,  position = 4),
-        // Group 3 — U B K D
-        LetterGroupMember(groupId = 3, phonemeId = 9,  position = 1),
-        LetterGroupMember(groupId = 3, phonemeId = 10, position = 2),
-        LetterGroupMember(groupId = 3, phonemeId = 11, position = 3),
-        LetterGroupMember(groupId = 3, phonemeId = 12, position = 4),
-        // Group 4 — G P R E
-        LetterGroupMember(groupId = 4, phonemeId = 13, position = 1),
-        LetterGroupMember(groupId = 4, phonemeId = 14, position = 2),
-        LetterGroupMember(groupId = 4, phonemeId = 15, position = 3),
-        LetterGroupMember(groupId = 4, phonemeId = 16, position = 4),
-        // Group 5 — H W F J
-        LetterGroupMember(groupId = 5, phonemeId = 17, position = 1),
-        LetterGroupMember(groupId = 5, phonemeId = 18, position = 2),
-        LetterGroupMember(groupId = 5, phonemeId = 19, position = 3),
-        LetterGroupMember(groupId = 5, phonemeId = 20, position = 4),
-        // Group 6 — C Q V X
-        LetterGroupMember(groupId = 6, phonemeId = 21, position = 1),
-        LetterGroupMember(groupId = 6, phonemeId = 22, position = 2),
-        LetterGroupMember(groupId = 6, phonemeId = 23, position = 3),
-        LetterGroupMember(groupId = 6, phonemeId = 24, position = 4),
-        // Group 7 — Y Z NG NY
-        LetterGroupMember(groupId = 7, phonemeId = 25, position = 1),
-        LetterGroupMember(groupId = 7, phonemeId = 26, position = 2),
-        LetterGroupMember(groupId = 7, phonemeId = 27, position = 3),
-        LetterGroupMember(groupId = 7, phonemeId = 28, position = 4)
+        LetterGroupMember(groupId = 1, phonemeId = 1, position = 1),  // M
+        LetterGroupMember(groupId = 1, phonemeId = 2, position = 2),  // S
+        LetterGroupMember(groupId = 1, phonemeId = 3, position = 3),  // A
+        LetterGroupMember(groupId = 1, phonemeId = 4, position = 4),  // I
+        LetterGroupMember(groupId = 1, phonemeId = 5, position = 5),  // O
+        LetterGroupMember(groupId = 1, phonemeId = 6, position = 6),  // B
+        LetterGroupMember(groupId = 1, phonemeId = 7, position = 7),  // E
+
+        // ==================== GROUP 2 (7 letters) ====================
+        LetterGroupMember(groupId = 2, phonemeId = 8, position = 1),  // U
+        LetterGroupMember(groupId = 2, phonemeId = 9, position = 2),  // T
+        LetterGroupMember(groupId = 2, phonemeId = 10, position = 3), // K
+        LetterGroupMember(groupId = 2, phonemeId = 11, position = 4), // L
+        LetterGroupMember(groupId = 2, phonemeId = 12, position = 5), // Y
+        LetterGroupMember(groupId = 2, phonemeId = 13, position = 6), // N
+        LetterGroupMember(groupId = 2, phonemeId = 14, position = 7), // G
+
+        // ==================== GROUP 3 (7 letters) ====================
+        LetterGroupMember(groupId = 3, phonemeId = 15, position = 1), // P
+        LetterGroupMember(groupId = 3, phonemeId = 16, position = 2), // R
+        LetterGroupMember(groupId = 3, phonemeId = 17, position = 3), // D
+        LetterGroupMember(groupId = 3, phonemeId = 18, position = 4), // H
+        LetterGroupMember(groupId = 3, phonemeId = 19, position = 5), // W
+        LetterGroupMember(groupId = 3, phonemeId = 20, position = 6), // C
+        LetterGroupMember(groupId = 3, phonemeId = 21, position = 7), // F
+
+        // ==================== GROUP 4 (7 letters - NG and NY at the end) ====================
+        LetterGroupMember(groupId = 4, phonemeId = 22, position = 1), // J
+        LetterGroupMember(groupId = 4, phonemeId = 23, position = 2), // Q
+        LetterGroupMember(groupId = 4, phonemeId = 24, position = 3), // V
+        LetterGroupMember(groupId = 4, phonemeId = 25, position = 4), // X
+        LetterGroupMember(groupId = 4, phonemeId = 26, position = 5), // Z
+        LetterGroupMember(groupId = 4, phonemeId = 27, position = 6), // NG
+        LetterGroupMember(groupId = 4, phonemeId = 28, position = 7)  // NY
+    )
+    fun getBlendItWords() = listOf(
+        // Group 1 — M S A I O BE
+        BlendItWord(groupId = 1, word = "SAM", wordPattern = "CVC", audioPath = "audio/words/sam.mp3", imagePath = "images/words/sam.png"),
+        BlendItWord(groupId = 1, word = "SIM", wordPattern = "CVC", audioPath = "audio/words/sim.mp3", imagePath = "images/words/sim.png"),
+        BlendItWord(groupId = 1, word = "AIM", wordPattern = "VVC", audioPath = "audio/words/aim.mp3", imagePath = "images/words/aim.png"),
+        BlendItWord(groupId = 1, word = "MAS", wordPattern = "CVC", audioPath = "audio/words/mas.mp3", imagePath = "images/words/mas.png"),
+        BlendItWord(groupId = 1, word = "SAI", wordPattern = "CVC", audioPath = "audio/words/sai.mp3", imagePath = "images/words/sai.png"),
+
+        // Group 2 — N T O L + cumulative
+        BlendItWord(groupId = 2, word = "TAN", wordPattern = "CVC", audioPath = "audio/words/tan.mp3", imagePath = "images/words/tan.png"),
+        BlendItWord(groupId = 2, word = "NOT", wordPattern = "CVC", audioPath = "audio/words/not.mp3", imagePath = "images/words/not.png"),
+        BlendItWord(groupId = 2, word = "LOT", wordPattern = "CVC", audioPath = "audio/words/lot.mp3", imagePath = "images/words/lot.png"),
+        BlendItWord(groupId = 2, word = "MIST", wordPattern = "CCVC", audioPath = "audio/words/mist.mp3", imagePath = "images/words/mist.png"),
+        BlendItWord(groupId = 2, word = "MINT", wordPattern = "CCVC", audioPath = "audio/words/mint.mp3", imagePath = "images/words/mint.png"),
+
+        // Group 3 — U B K D + cumulative
+        BlendItWord(groupId = 3, word = "BUD", wordPattern = "CVC", audioPath = "audio/words/bud.mp3", imagePath = "images/words/bud.png"),
+        BlendItWord(groupId = 3, word = "BULK", wordPattern = "CVCC", audioPath = "audio/words/bulk.mp3", imagePath = "images/words/bulk.png"),
+        BlendItWord(groupId = 3, word = "DUST", wordPattern = "CVCC", audioPath = "audio/words/dust.mp3", imagePath = "images/words/dust.png"),
+        BlendItWord(groupId = 3, word = "BOND", wordPattern = "CVCC", audioPath = "audio/words/bond.mp3", imagePath = "images/words/bond.png"),
+        BlendItWord(groupId = 3, word = "TUSK", wordPattern = "CVCC", audioPath = "audio/words/tusk.mp3", imagePath = "images/words/tusk.png"),
+
+        // Group 4 — G P R E + cumulative
+        BlendItWord(groupId = 4, word = "GRIP", wordPattern = "CCVC", audioPath = "audio/words/grip.mp3", imagePath = "images/words/grip.png"),
+        BlendItWord(groupId = 4, word = "DRUM", wordPattern = "CCVC", audioPath = "audio/words/drum.mp3", imagePath = "images/words/drum.png"),
+        BlendItWord(groupId = 4, word = "PEST", wordPattern = "CVCC", audioPath = "audio/words/pest.mp3", imagePath = "images/words/pest.png"),
+        BlendItWord(groupId = 4, word = "BURN", wordPattern = "CVCC", audioPath = "audio/words/burn.mp3", imagePath = "images/words/burn.png"),
+        BlendItWord(groupId = 4, word = "GLEN", wordPattern = "CCVC", audioPath = "audio/words/glen.mp3", imagePath = "images/words/glen.png"),
     )
 }
