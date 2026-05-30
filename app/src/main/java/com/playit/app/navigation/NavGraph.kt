@@ -59,11 +59,14 @@ fun NavGraph(
             )
         }
 
-        // Map
+        //map
         composable(Screen.Map.route) {
             MapScreen(
                 onLetterSelected = { phonemeId ->
                     navController.navigate(Screen.HearIt.createRoute(phonemeId))
+                },
+                onBlendItSelected = { groupId ->
+                    navController.navigate(Screen.BlendIt.createRoute(groupId))
                 },
                 onDashboardClicked = {
                     navController.navigate(Screen.Dashboard.route)

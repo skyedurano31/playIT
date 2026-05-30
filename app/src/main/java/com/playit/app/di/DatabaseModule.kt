@@ -42,6 +42,7 @@ object DatabaseModule {
                     }
                 }
             })
+//            .fallbackToDestructiveMigration()
             .build()
         return db
     }

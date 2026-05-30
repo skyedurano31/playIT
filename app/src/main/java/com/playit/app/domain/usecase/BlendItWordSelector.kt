@@ -20,21 +20,15 @@ class BlendItWordSelector @Inject constructor(
     ): List<BlendItWord> {
         val allGroupIds = (masteredGroupIds + currentGroupId).distinct()
         val allWords = blendItWordRepository.getWordsByGroups(allGroupIds)
-
-        // ensure at least 1 word from current group
         val currentGroupWords = allWords.filter { it.groupId == currentGroupId }
-        val otherWords = allWords.filter { it.groupId != currentGroupId }.shuffled()
-
         val selected = mutableListOf<BlendItWord>()
-
-        // add 1-2 from current group first
         selected.addAll(currentGroupWords.shuffled().take(2))
 
-        // fill rest from all words
-        val remaining = otherWords
+        val otherWords = allWords
             .filter { it !in selected }
+            .shuffled()
             .take(WORDS_PER_SESSION - selected.size)
-        selected.addAll(remaining)
+        selected.addAll(otherWords)
 
         return selected.shuffled().take(WORDS_PER_SESSION)
     }

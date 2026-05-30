@@ -1,12 +1,14 @@
 package com.playit.app.presentation.map
 
-import androidx.compose.animation.core.*
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -14,34 +16,33 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
-import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.graphics.*
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.*
+import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.playit.app.domain.model.MapNode
-import kotlinx.coroutines.delay
+import androidx.compose.ui.unit.times
 
-// 🌈 Kid-friendly colors
-val colorLocked = Color(0xFFB0BEC5)
-val colorNext = Color(0xFFFFD54F)
-val colorOneStar = Color(0xFF64B5F6)
-val colorTwoStar = Color(0xFF81C784)
+val colorLocked = Color(0xFFBDBDBD)
+val colorUnstarred = Color(0xFFFFA726)
+val colorOneStar = Color(0xFF42A5F5)
+val colorTwoStar = Color(0xFF66BB6A)
 val colorThreeStar = Color(0xFF4CAF50)
-val colorPath = Color(0xFFFFF176)
-val colorBlendIt = Color(0xFF9C27B0)
-val colorBlendItLocked = Color(0xFFCE93D8)
-val colorBlendPath = Color(0xFFFFB74D)
 
 @Composable
 fun MapScreen(
     onLetterSelected: (Int) -> Unit,
+    onBlendItSelected: (Int) -> Unit,
     onDashboardClicked: () -> Unit,
     viewModel: MapViewModel = hiltViewModel()
 ) {
@@ -50,7 +51,6 @@ fun MapScreen(
     val scrollState = rememberScrollState()
 
     val lifecycleOwner = LocalLifecycleOwner.current
-
     DisposableEffect(lifecycleOwner) {
         val observer = LifecycleEventObserver { _, event ->
             if (event == Lifecycle.Event.ON_RESUME) {
@@ -61,55 +61,58 @@ fun MapScreen(
         onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
     }
 
-    LaunchedEffect(mapNodes, isLoading) {
-        if (mapNodes.isNotEmpty() && !isLoading) {
-            delay(120)
-            scrollState.animateScrollTo(scrollState.maxValue)
-        }
-    }
+    Column(modifier = Modifier.fillMaxSize()) {
 
-    Column(Modifier.fillMaxSize()) {
+        // top bar
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .background(
-                    Brush.horizontalGradient(
-                        listOf(Color(0xFFFFD54F), Color(0xFFFF8A65))
-                    )
-                )
-                .padding(14.dp),
+                .background(MaterialTheme.colorScheme.primary)
+                .padding(horizontal = 16.dp, vertical = 12.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text(
-                text = "👾 PlayIT",
+                text = "playIT",
                 color = Color.White,
-                fontSize = 22.sp,
+                fontSize = 24.sp,
                 fontWeight = FontWeight.Bold
             )
             TextButton(onClick = onDashboardClicked) {
-                Text("Parent", color = Color.White)
+                Text(
+                    text = "Dashboard",
+                    color = Color.White,
+                    fontSize = 14.sp
+                )
             }
         }
 
         if (isLoading) {
-            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                CircularProgressIndicator(color = Color(0xFFFFC107))
+            Box(
+                modifier = Modifier.fillMaxSize(),
+                contentAlignment = Alignment.Center
+            ) {
+                CircularProgressIndicator()
             }
         } else {
             Box(
-                Modifier
+                modifier = Modifier
                     .fillMaxSize()
-                    .background(
-                        Brush.verticalGradient(
-                            listOf(Color(0xFFFFF8E1), Color(0xFFFFECB3))
-                        )
-                    )
+                    .background(Color(0xFFF5F5F5))
                     .verticalScroll(scrollState)
             ) {
                 WindingPathMap(
                     nodes = mapNodes,
-                    onNodeClick = { if (it.isUnlocked) onLetterSelected(it.phonemeId) }
+                    onNodeClick = { node ->
+                        if (node.isUnlocked) {
+                            onLetterSelected(node.phonemeId)
+                        }
+                    },
+                    onBlendItClick = { node ->
+                        if (node.isUnlocked) {
+                            onBlendItSelected(node.groupId)
+                        }
+                    }
                 )
             }
         }
@@ -119,253 +122,235 @@ fun MapScreen(
 @Composable
 fun WindingPathMap(
     nodes: List<MapNode>,
-    onNodeClick: (MapNode.LetterNode) -> Unit
+    onNodeClick: (MapNode.LetterNode) -> Unit,
+    onBlendItClick: (MapNode.BlendItNode) -> Unit
 ) {
-    val nodeSize = 78.dp
-    val blendItNodeSize = 90.dp  // ✅ blendIT nodes are BIGGER (90dp vs 78dp)
-    val rowHeight = 135.dp  // ✅ Increased row height to fit bigger nodes
+    val nodeSize = 72.dp
+    val blendItWidth = 110.dp
+    val blendItHeight = 44.dp
+    val rowHeight = 120.dp
+    val screenWidth = 360.dp
+    val leftX = 80.dp
+    val rightX = screenWidth - 80.dp
 
     val density = LocalDensity.current
-    val leftX = 80.dp
-    val rightX = 280.dp
 
+    // Convert to pixels for Canvas
+    val nodeSizePx = with(density) { nodeSize.toPx() }
+    val blendItHeightPx = with(density) { blendItHeight.toPx() }
+    val rowHeightPx = with(density) { rowHeight.toPx() }
     val leftXPx = with(density) { leftX.toPx() }
     val rightXPx = with(density) { rightX.toPx() }
-    val nodeSizePx = with(density) { nodeSize.toPx() }
-    val blendItNodeSizePx = with(density) { blendItNodeSize.toPx() }
-    val rowHeightPx = with(density) { rowHeight.toPx() }
 
-    // Get letter nodes in ORIGINAL order (m, s, a, i, o, b, e...)
-    val letterNodes = nodes.filterIsInstance<MapNode.LetterNode>()
-
-    // Reverse for bottom-to-top counting, insert blendIT, then reverse back
-    val nodesFromBottom = letterNodes.reversed()
-
-    val combinedFromBottom = mutableListOf<Pair<MapNode, Boolean>>()
-
-    nodesFromBottom.forEachIndexed { index, letterNode ->
-        combinedFromBottom.add(Pair(letterNode, false))
-
-        // Add blendIT after every 5th letter from BOTTOM
-        if ((index + 1) % 5 == 0 && index < nodesFromBottom.size - 1) {
-            val placeholderNode = MapNode.LetterNode(
-                phonemeId = 1000 + ((index + 1) / 5),
-                letter = "📖",
-                isUnlocked = letterNode.isUnlocked,
-                starsEarned = 0
-            )
-            combinedFromBottom.add(Pair(placeholderNode, true))
-        }
+    // Calculate total height in Dp for the Box
+    val totalHeight = with(density) {
+        ((nodes.size + 1) * rowHeightPx + 80.dp.toPx()).toDp()
     }
 
-    // Reverse back for rendering (bottom to top display)
-    val combinedNodes = combinedFromBottom.reversed()
-
     Box(
-        Modifier
+        modifier = Modifier
             .fillMaxWidth()
-            .height(with(density) { ((combinedNodes.size + 1) * rowHeightPx).toDp() })
+            .height(totalHeight)
     ) {
+        // Draw connecting path (Canvas uses pixels)
+        Canvas(modifier = Modifier.fillMaxSize()) {
+            nodes.forEachIndexed { index, node ->
+                if (index < nodes.size - 1) {
+                    val isLeft = index % 2 == 0
+                    val nextIsLeft = (index + 1) % 2 == 0
 
-        // ✨ PATH
-        Canvas(Modifier.fillMaxSize()) {
-            for (i in 0 until combinedNodes.size - 1) {
-                val (currentNode, isCurrentBlendIt) = combinedNodes[i]
-                val (nextNode, isNextBlendIt) = combinedNodes[i + 1]
+                    val currentX = if (isLeft) leftXPx else rightXPx
+                    val nextX = if (nextIsLeft) leftXPx else rightXPx
 
-                val startX = if (i % 2 == 0) leftXPx else rightXPx
-                val endX = if ((i + 1) % 2 == 0) leftXPx else rightXPx
+                    val currentCenterY = when (node) {
+                        is MapNode.LetterNode -> (index + 1) * rowHeightPx + nodeSizePx / 2
+                        is MapNode.BlendItNode -> (index + 1) * rowHeightPx + blendItHeightPx / 2
+                    }
+                    val nextNode = nodes[index + 1]
+                    val nextCenterY = when (nextNode) {
+                        is MapNode.LetterNode -> (index + 2) * rowHeightPx + nodeSizePx / 2
+                        is MapNode.BlendItNode -> (index + 2) * rowHeightPx + blendItHeightPx / 2
+                    }
 
-                val startY = (i + 1) * rowHeightPx
-                val endY = (i + 2) * rowHeightPx
+                    val isUnlocked = when (node) {
+                        is MapNode.LetterNode -> node.isUnlocked
+                        is MapNode.BlendItNode -> node.isUnlocked
+                    }
+                    val pathColor = if (isUnlocked) Color(0xFF90CAF9) else Color(0xFFE0E0E0)
 
-                val isBlendItPath = isCurrentBlendIt || isNextBlendIt
-                val isCompleted = if (currentNode is MapNode.LetterNode && !isCurrentBlendIt) {
-                    currentNode.starsEarned > 0
-                } else false
-
-                val pathColor = when {
-                    isBlendItPath -> colorBlendPath
-                    isCompleted -> colorPath
-                    else -> Color(0xFFFFE082)
-                }
-
-                val path = Path().apply {
-                    moveTo(startX, startY)
-                    cubicTo(
-                        startX, startY + 100f,
-                        endX, endY - 100f,
-                        endX, endY
+                    val path = Path().apply {
+                        moveTo(currentX, currentCenterY)
+                        cubicTo(
+                            currentX, currentCenterY + rowHeightPx * 0.5f,
+                            nextX, nextCenterY - rowHeightPx * 0.5f,
+                            nextX, nextCenterY
+                        )
+                    }
+                    drawPath(
+                        path = path,
+                        color = pathColor,
+                        style = Stroke(width = 8f, cap = StrokeCap.Round)
                     )
                 }
-
-                drawPath(
-                    path = path,
-                    color = pathColor,
-                    style = Stroke(width = 10f, cap = StrokeCap.Round)
-                )
             }
         }
 
-        // 🎮 NODES
-        combinedNodes.forEachIndexed { index, (node, isBlendIt) ->
+        // Draw nodes (using Dp values for offsets)
+        nodes.forEachIndexed { index, node ->
             val isLeft = index % 2 == 0
-            val xPx = if (isLeft) leftXPx else rightXPx
-            val yPx = (index + 1) * rowHeightPx
+            val yOffset = (index + 1) * rowHeight
 
-            // Different bounce animation for blendIT nodes
-            val bounce = rememberInfiniteTransition(label = "bounce_$index")
-                .animateFloat(
-                    0f, if (isBlendIt) 8f else 10f,  // ✅ Slightly less bounce for blendIT
-                    infiniteRepeatable(
-                        tween(if (isBlendIt) 1000 else 900),
-                        RepeatMode.Reverse
-                    ),
-                    label = "b"
-                ).value
-
-            if (isBlendIt && node is MapNode.LetterNode) {
-                val scale by animateFloatAsState(
-                    targetValue = if (node.isUnlocked) 1f else 0.85f,
-                    animationSpec = spring(),
-                    label = "scale"
-                )
-
-                // ✅ Using blendItNodeSize (90dp) instead of regular nodeSize (78dp)
-                BlendItPlaceholder(
-                    isUnlocked = node.isUnlocked,
-                    size = blendItNodeSize,
-                    modifier = Modifier.offset(
-                        x = with(density) { xPx.toDp() - blendItNodeSize / 2 },
-                        y = with(density) { (yPx.toDp()) + bounce.dp }
-                    ),
-                    scale = scale
-                )
-            } else if (node is MapNode.LetterNode && !isBlendIt) {
-                val scale by animateFloatAsState(
-                    targetValue = if (node.isUnlocked) 1f else 0.85f,
-                    animationSpec = spring(),
-                    label = "scale"
-                )
-
-                LetterNode(
-                    node = node,
-                    size = nodeSize,
-                    modifier = Modifier.offset(
-                        x = with(density) { xPx.toDp() - nodeSize / 2 },
-                        y = with(density) { (yPx.toDp()) + bounce.dp }
-                    ),
-                    scale = scale,
-                    onClick = { onNodeClick(node) }
-                )
+            when (node) {
+                is MapNode.LetterNode -> {
+                    val xOffset = if (isLeft) leftX - nodeSize / 2
+                    else rightX - nodeSize / 2
+                    LetterNodeCircle(
+                        node = node,
+                        size = nodeSize,
+                        modifier = Modifier
+                            .offset(x = xOffset, y = yOffset)
+                            .clickable(enabled = node.isUnlocked) {
+                                onNodeClick(node)
+                            }
+                    )
+                }
+                is MapNode.BlendItNode -> {
+                    val xOffset = if (isLeft) leftX - blendItWidth / 2
+                    else rightX - blendItWidth / 2
+                    BlendItNodeBanner(
+                        node = node,
+                        modifier = Modifier
+                            .offset(x = xOffset, y = yOffset)
+                            .clickable(enabled = node.isUnlocked) {
+                                onBlendItClick(node)
+                            }
+                    )
+                }
             }
         }
     }
 }
 
 @Composable
-fun LetterNode(
+fun LetterNodeCircle(
     node: MapNode.LetterNode,
     size: Dp,
-    modifier: Modifier,
-    scale: Float,
-    onClick: () -> Unit
+    modifier: Modifier = Modifier
 ) {
-    val color = when {
+    val nodeColor = when {
         !node.isUnlocked -> colorLocked
         node.starsEarned == 3 -> colorThreeStar
         node.starsEarned == 2 -> colorTwoStar
         node.starsEarned == 1 -> colorOneStar
-        else -> colorNext
+        else -> colorUnstarred
     }
 
-    Column(
-        modifier = modifier
-            .scale(scale)
-            .clickable(enabled = node.isUnlocked) { onClick() },
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
-        Box(
-            Modifier
-                .size(size)
-                .shadow(12.dp, CircleShape)
-                .clip(CircleShape)
-                .background(
-                    Brush.radialGradient(
-                        listOf(color, color.copy(alpha = 0.7f))
-                    )
-                ),
-            contentAlignment = Alignment.Center
-        ) {
-            Text(
-                text = if (node.isUnlocked) node.letter.uppercase() else "🔒",
-                fontSize = 30.sp,
-                fontWeight = FontWeight.Bold,
-                color = Color.White
-            )
-        }
-
-        Spacer(Modifier.height(6.dp))
-
-        Row {
-            repeat(3) {
-                Text(
-                    text = if (it < node.starsEarned) "⭐" else "☆",
-                    fontSize = 14.sp
-                )
-            }
-        }
-    }
-}
-
-@Composable
-fun BlendItPlaceholder(
-    isUnlocked: Boolean,
-    size: Dp,
-    modifier: Modifier,
-    scale: Float
-) {
-    val color = if (isUnlocked) colorBlendIt else colorBlendItLocked
+    val scale by animateFloatAsState(
+        targetValue = if (node.isUnlocked) 1f else 0.85f,
+        animationSpec = tween(300),
+        label = "scale"
+    )
 
     Column(
         modifier = modifier.scale(scale),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        // ✅ Larger circle for blendIT
         Box(
-            Modifier
-                .size(size)  // Now 90dp instead of 78dp
-                .shadow(14.dp, CircleShape)  // Slightly larger shadow
+            modifier = Modifier
+                .size(size)
                 .clip(CircleShape)
-                .background(
-                    Brush.radialGradient(
-                        listOf(color, color.copy(alpha = 0.7f))
-                    )
-                ),
+                .background(nodeColor),
             contentAlignment = Alignment.Center
         ) {
-            // ✅ Bigger emoji
-            Text(
-                text = if (isUnlocked) "📖" else "🔒",
-                fontSize = 50.sp  // Increased from 32sp
-            )
+            if (!node.isUnlocked) {
+                Text(text = "🔒", fontSize = 24.sp)
+            } else {
+                Text(
+                    text = node.letter,
+                    color = Color.White,
+                    fontSize = 28.sp,
+                    fontWeight = FontWeight.Bold
+                )
+            }
         }
 
-        Spacer(modifier = Modifier.height(8.dp))
+        Spacer(modifier = Modifier.height(4.dp))
 
-        // ✅ Larger text
-        Text(
-            text = "blendIT",
-            fontSize = 15.sp,  // Increased from 11sp
-            fontWeight = FontWeight.Bold,
-            color = color,
-            maxLines = 1
-        )
+        if (node.starsEarned > 0) {
+            Row(horizontalArrangement = Arrangement.Center) {
+                repeat(3) { index ->
+                    Text(
+                        text = if (index < node.starsEarned) "⭐" else "☆",
+                        fontSize = 12.sp
+                    )
+                }
+            }
+        } else if (node.isUnlocked) {
+            Text(
+                text = node.letter,
+                fontSize = 11.sp,
+                color = Color.Gray
+            )
+        }
+    }
+}
 
-        Text(
-            text = "Soon!",
-            fontSize = 9.sp,  // Increased from 8sp
-            color = color.copy(alpha = 0.7f)
-        )
+@Composable
+fun BlendItNodeBanner(
+    node: MapNode.BlendItNode,
+    modifier: Modifier = Modifier
+) {
+    val bgColor = when {
+        !node.isUnlocked -> colorLocked
+        node.starsEarned > 0 -> Color(0xFF7B1FA2)
+        else -> Color(0xFF9C27B0)
+    }
+
+    val scale by animateFloatAsState(
+        targetValue = if (node.isUnlocked) 1f else 0.85f,
+        animationSpec = tween(300),
+        label = "blendScale"
+    )
+
+    Column(
+        modifier = modifier.scale(scale),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Box(
+            modifier = Modifier
+                .width(110.dp)
+                .height(44.dp)
+                .clip(RoundedCornerShape(22.dp))
+                .background(bgColor),
+            contentAlignment = Alignment.Center
+        ) {
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(4.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = if (node.isUnlocked) "🔤" else "🔒",
+                    fontSize = 16.sp
+                )
+                Text(
+                    text = "Blend It",
+                    color = Color.White,
+                    fontSize = 13.sp,
+                    fontWeight = FontWeight.Bold
+                )
+            }
+        }
+
+        if (node.starsEarned > 0) {
+            Spacer(modifier = Modifier.height(2.dp))
+            Row {
+                repeat(3) { index ->
+                    Text(
+                        text = if (index < node.starsEarned) "⭐" else "☆",
+                        fontSize = 10.sp
+                    )
+                }
+            }
+        }
     }
 }
