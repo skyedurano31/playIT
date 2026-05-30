@@ -7,4 +7,11 @@ sealed class MapNode {
         val isUnlocked: Boolean,
         val starsEarned: Int
     ) : MapNode()
+
+    data class BlendItNode(
+        val groupId: Int,
+        val groupNumber: Int,
+        val isUnlocked: Boolean,
+        val starsEarned: Int
+    ) : MapNode()
 }

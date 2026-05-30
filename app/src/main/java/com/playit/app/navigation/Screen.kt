@@ -17,4 +17,12 @@ sealed class Screen(val route: String) {
     object LetterComplete : Screen("letter_complete/{phonemeId}") {
         fun createRoute(phonemeId: Int) = "letter_complete/$phonemeId"
     }
+
+    object BlendIt : Screen("blend_it/{groupId}") {
+        fun createRoute(groupId: Int) = "blend_it/$groupId"
+    }
+    object BlendItComplete : Screen("blend_it_complete/{groupId}") {
+        fun createRoute(groupId: Int) = "blend_it_complete/$groupId"
+    }
+
 }

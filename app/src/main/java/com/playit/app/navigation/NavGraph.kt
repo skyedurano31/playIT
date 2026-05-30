@@ -12,6 +12,8 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
+import com.playit.app.presentation.blendit.BlendItCompleteScreen
+import com.playit.app.presentation.blendit.BlendItScreen
 import com.playit.app.presentation.common.SplashScreen
 import com.playit.app.presentation.dashboard.ParentDashboardScreen
 import com.playit.app.presentation.findit.FindItScreen
@@ -159,6 +161,46 @@ fun NavGraph(
             ParentDashboardScreen(
                 onBack = {
                     navController.popBackStack()
+                }
+            )
+        }
+
+        composable(
+            route = Screen.BlendIt.route,
+            arguments = listOf(
+                navArgument("groupId") { type = NavType.IntType }
+            )
+        ) { backStackEntry ->
+            val groupId = backStackEntry.arguments?.getInt("groupId") ?: 1
+            BlendItScreen(
+                groupId = groupId,
+                onComplete = { id, stars ->
+                    navController.navigate(
+                        Screen.BlendItComplete.createRoute(id) + "?stars=$stars"
+                    ) {
+                        popUpTo(Screen.Map.route) { inclusive = false }
+                    }
+                },
+                onBack = { navController.popBackStack() }
+            )
+        }
+
+        composable(
+            route = Screen.BlendItComplete.route + "?stars={stars}",
+            arguments = listOf(
+                navArgument("groupId") { type = NavType.IntType },
+                navArgument("stars") { type = NavType.IntType; defaultValue = 1 }
+            )
+        ) { backStackEntry ->
+            val groupId = backStackEntry.arguments?.getInt("groupId") ?: 1
+            val stars = backStackEntry.arguments?.getInt("stars") ?: 1
+            BlendItCompleteScreen(
+                groupId = groupId,
+                starsEarned = stars,
+                onContinue = {
+                    navController.navigate(Screen.Map.route) {
+                        popUpTo(Screen.Map.route) { inclusive = true }
+                    }
                 }
             )
         }
